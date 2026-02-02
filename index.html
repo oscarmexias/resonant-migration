@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共鳴移動 — Resonant Migration</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #111111;
+            --orange: #e85d04;
+            --orange-dim: #ff6b0033;
+            --cyan: #4cc9f0;
+            --cyan-dim: #4cc9f022;
+            --white: #f0f0f0;
+            --gray: #555555;
+            --gray-light: #888888;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        ::selection { background: var(--orange); color: var(--bg-primary); }
+        body {
+            font-family: 'Noto Sans JP', 'Space Mono', sans-serif;
+            background: var(--bg-primary);
+            color: var(--white);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .header {
+            padding: 12px 30px;
+            border-bottom: 1px solid var(--gray);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .header-left .title-jp { font-size: 24px; font-weight: 300; letter-spacing: 6px; color: var(--white); }
+        .header-left .title-en { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--orange); }
+        .header-center { display: flex; align-items: center; gap: 20px; font-family: 'Space Mono', monospace; font-size: 11px; }
+        .location-display { display: flex; align-items: center; gap: 8px; color: var(--cyan); }
+        .location-flag { font-size: 18px; }
+        .location-name { color: var(--white); letter-spacing: 1px; }
+        .time-display { color: var(--orange); font-size: 14px; letter-spacing: 2px; font-weight: bold; }
+        .header-right { display: flex; gap: 20px; font-family: 'Space Mono', monospace; font-size: 9px; color: var(--gray-light); }
+        .header-right .status { color: var(--cyan); }
+        .main { display: grid; grid-template-columns: 1fr 280px; height: calc(100vh - 55px); }
+        .art-section { padding: 15px; display: flex; flex-direction: column; }
+        #canvas-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--gray);
+            position: relative;
+            flex: 1;
+            overflow: hidden;
+        }
+        #canvas-container::before {
+            content: 'GEN_ART_v2.049';
+            position: absolute;
+            top: 10px; left: 12px;
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            color: var(--orange);
+            letter-spacing: 2px;
+            z-index: 10;
+        }
+        .sidebar {
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--gray);
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            overflow-y: auto;
+        }
+        .sidebar-section { border-bottom: 1px solid #222; padding-bottom: 12px; }
+        .sidebar-section:last-child { border-bottom: none; }
+        .sidebar-section h3 { font-weight: 300; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-light); margin-bottom: 10px; }
+        .message-section { background: linear-gradient(180deg, var(--orange-dim), transparent); border: 1px solid var(--orange); padding: 10px; }
+        .message-section h3 { color: var(--orange); margin-bottom: 8px; }
+        .message-input-wrapper { display: flex; gap: 6px; }
+        .message-input { flex: 1; background: transparent; border: 1px solid var(--gray); color: var(--white); font-family: 'Space Mono', monospace; font-size: 11px; padding: 8px; }
+        .message-input:focus { outline: none; border-color: var(--orange); }
+        .message-input::placeholder { color: var(--gray); }
+        .btn-send { background: var(--orange); border: none; color: var(--bg-primary); font-family: 'Space Mono', monospace; font-size: 9px; padding: 8px 12px; cursor: pointer; font-weight: bold; }
+        .btn-send:hover { background: var(--cyan); }
+        .letter-hint { font-size: 8px; color: var(--gray); text-align: center; margin-top: 6px; }
+
+        /* Audio Section */
+        .audio-section { background: linear-gradient(180deg, var(--cyan-dim), transparent); border: 1px solid var(--cyan); padding: 10px; }
+        .audio-section h3 { color: var(--cyan); }
+        .btn-audio { width: 100%; background: var(--cyan); border: none; color: var(--bg-primary); font-family: 'Space Mono', monospace; font-size: 10px; padding: 10px; cursor: pointer; font-weight: bold; margin-top: 8px; }
+        .btn-audio:hover { background: var(--orange); }
+        .btn-audio.active { background: #22c55e; }
+        .audio-hint { font-size: 8px; color: var(--gray); text-align: center; margin-top: 6px; }
+        .audio-level { height: 4px; background: var(--gray); margin-top: 8px; border-radius: 2px; overflow: hidden; }
+        .audio-level-bar { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--orange)); width: 0%; transition: width 0.05s; }
+
+        .seed-display { font-family: 'Space Mono', monospace; font-size: 20px; color: var(--orange); text-align: center; margin-bottom: 8px; letter-spacing: 2px; }
+        .seed-input { width: 100%; background: transparent; border: 1px solid var(--gray); color: var(--white); font-family: 'Space Mono', monospace; font-size: 11px; padding: 6px; text-align: center; margin-bottom: 6px; }
+        .seed-input:focus { outline: none; border-color: var(--orange); }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+        .btn { background: transparent; border: 1px solid var(--gray); color: var(--white); font-family: 'Space Mono', monospace; font-size: 8px; padding: 6px 4px; cursor: pointer; }
+        .btn:hover { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+        .btn.primary { grid-column: span 2; background: var(--orange); border-color: var(--orange); color: var(--bg-primary); }
+        .btn.primary:hover { background: transparent; color: var(--orange); }
+        .control-item { margin-bottom: 10px; }
+        .control-item label { display: flex; justify-content: space-between; font-size: 8px; letter-spacing: 1px; color: var(--gray-light); margin-bottom: 5px; }
+        .control-item label span { color: var(--cyan); font-family: 'Space Mono', monospace; }
+        .slider { width: 100%; height: 2px; background: var(--gray); -webkit-appearance: none; cursor: pointer; }
+        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 8px; background: var(--orange); cursor: pointer; }
+        .music-section { margin-top: auto; padding-bottom: 0; flex-shrink: 0; }
+        .music-section h3 { display: flex; align-items: center; gap: 6px; }
+        .music-section h3::before { content: '♫'; color: var(--cyan); }
+        .spotify-embed { margin-top: 8px; }
+        .glitch:hover { animation: glitch 0.3s ease; }
+        @keyframes glitch {
+            0%, 100% { transform: translate(0); }
+            20% { transform: translate(-2px, 2px); }
+            40% { transform: translate(2px, -2px); }
+            60% { transform: translate(-2px, -2px); }
+            80% { transform: translate(2px, 2px); }
+        }
+        @media (max-width: 900px) {
+            .main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
+            .header { flex-wrap: wrap; padding: 10px 15px; }
+            .header-center { order: 3; width: 100%; justify-content: center; margin-top: 8px; }
+            .art-section { padding: 10px; min-height: 50vh; }
+            .sidebar { border-left: none; border-top: 1px solid var(--gray); max-height: 45vh; }
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-left">
+            <div class="title-jp glitch">共鳴移動</div>
+            <div class="title-en">RESONANT MIGRATION</div>
+        </div>
+        <div class="header-center">
+            <div class="location-display">
+                <span class="location-flag" id="country-flag">🌍</span>
+                <span class="location-name" id="country-name">Detecting...</span>
+            </div>
+            <div class="time-display" id="current-time">--:--:--</div>
+        </div>
+        <div class="header-right">
+            <span>SYS: <span class="status">ACTIVE</span></span>
+            <span>🎤: <span id="audio-status">OFF</span></span>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="art-section">
+            <div id="canvas-container" data-seed="42"></div>
+        </section>
+
+        <aside class="sidebar">
+            <div class="sidebar-section message-section">
+                <h3>メッセージ — Drop & Splash</h3>
+                <div class="message-input-wrapper">
+                    <input type="text" class="message-input" id="message-input" placeholder="Type to splash colors..." maxlength="20">
+                    <button class="btn-send" onclick="dropMessage()">DROP</button>
+                </div>
+                <div class="letter-hint">Letters fall & splash colors ✨</div>
+            </div>
+
+            <div class="sidebar-section audio-section">
+                <h3>🎤 Audio Reactive</h3>
+                <button class="btn-audio" id="audio-btn" onclick="toggleAudio()">ENABLE MICROPHONE</button>
+                <div class="audio-level"><div class="audio-level-bar" id="audio-bar"></div></div>
+                <div class="audio-hint">Art reacts to music playing around you</div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>シード — Seed</h3>
+                <div class="seed-display" id="seed-display">000042</div>
+                <input type="number" class="seed-input" id="seed-input" value="42" onchange="updateSeed()">
+                <div class="btn-row">
+                    <button class="btn" onclick="previousSeed()">← PREV</button>
+                    <button class="btn" onclick="nextSeed()">NEXT →</button>
+                    <button class="btn primary" onclick="randomSeedAndUpdate()">RANDOM</button>
+                </div>
+            </div>
+
+            <div class="sidebar-section">
+                <h3>パラメータ — Params</h3>
+                <div class="control-item">
+                    <label>PARTICLES <span id="particleCount-val">2000</span></label>
+                    <input type="range" class="slider" id="particleCount" min="500" max="5000" value="2000" oninput="updateParam('particleCount', this.value)">
+                </div>
+                <div class="control-item">
+                    <label>FORCE <span id="forceStrength-val">2.0</span></label>
+                    <input type="range" class="slider" id="forceStrength" min="0.5" max="5" step="0.1" value="2" oninput="updateParam('forceStrength', this.value)">
+                </div>
+                <div class="control-item">
+                    <label>TRAILS <span id="trailOpacity-val">8</span></label>
+                    <input type="range" class="slider" id="trailOpacity" min="1" max="30" value="8" oninput="updateParam('trailOpacity', this.value)">
+                </div>
+            </div>
+
+            <div class="sidebar-section music-section">
+                <h3>音楽 — Audio</h3>
+                <div class="spotify-embed">
+                    <iframe
+                        style="border-radius:8px"
+                        src="https://open.spotify.com/embed/playlist/5Q0C5wGHK7dXCQilrS3Ep6?utm_source=generator&theme=0"
+                        width="100%"
+                        height="152"
+                        frameBorder="0"
+                        allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                        loading="eager">
+                    </iframe>
+                </div>
+            </div>
+        </aside>
+    </main>
+
+    <script>
+        // ═══════════════════════════════════════════════════════════════════════
+        // AUDIO ANALYSIS - Microphone input for music reactivity
+        // ═══════════════════════════════════════════════════════════════════════
+
+        let audioContext, analyser, microphone, dataArray;
+        let audioEnabled = false;
+        let audioLevel = 0;
+        let bassLevel = 0;
+        let midLevel = 0;
+        let highLevel = 0;
+        let beatDetected = false;
+        let lastBeatTime = 0;
+        let beatThreshold = 0.6;
+        let smoothedLevel = 0;
+
+        async function toggleAudio() {
+            const btn = document.getElementById('audio-btn');
+            const status = document.getElementById('audio-status');
+
+            if (!audioEnabled) {
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    analyser = audioContext.createAnalyser();
+                    analyser.fftSize = 256;
+                    analyser.smoothingTimeConstant = 0.8;
+
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    microphone = audioContext.createMediaStreamSource(stream);
+                    microphone.connect(analyser);
+
+                    dataArray = new Uint8Array(analyser.frequencyBinCount);
+                    audioEnabled = true;
+
+                    btn.textContent = 'DISABLE MICROPHONE';
+                    btn.classList.add('active');
+                    status.textContent = 'ON';
+                    status.style.color = '#22c55e';
+
+                    analyzeAudio();
+                } catch (e) {
+                    alert('Microphone access denied. Please allow microphone access to enable audio reactivity.');
+                }
+            } else {
+                audioEnabled = false;
+                if (microphone) microphone.disconnect();
+                if (audioContext) audioContext.close();
+
+                btn.textContent = 'ENABLE MICROPHONE';
+                btn.classList.remove('active');
+                status.textContent = 'OFF';
+                status.style.color = '';
+                audioLevel = 0;
+            }
+        }
+
+        function analyzeAudio() {
+            if (!audioEnabled) return;
+
+            analyser.getByteFrequencyData(dataArray);
+
+            // Calculate frequency bands
+            const bufferLength = dataArray.length;
+            let bassSum = 0, midSum = 0, highSum = 0;
+
+            // Bass: 0-10 (roughly 0-300Hz)
+            for (let i = 0; i < 10; i++) bassSum += dataArray[i];
+            bassLevel = bassSum / (10 * 255);
+
+            // Mids: 10-50 (roughly 300Hz-1.5kHz)
+            for (let i = 10; i < 50; i++) midSum += dataArray[i];
+            midLevel = midSum / (40 * 255);
+
+            // Highs: 50-128 (roughly 1.5kHz+)
+            for (let i = 50; i < bufferLength; i++) highSum += dataArray[i];
+            highLevel = highSum / ((bufferLength - 50) * 255);
+
+            // Overall level
+            const sum = dataArray.reduce((a, b) => a + b, 0);
+            audioLevel = sum / (bufferLength * 255);
+
+            // Smooth the level
+            smoothedLevel = smoothedLevel * 0.9 + audioLevel * 0.1;
+
+            // Beat detection (based on bass)
+            if (bassLevel > beatThreshold && Date.now() - lastBeatTime > 200) {
+                beatDetected = true;
+                lastBeatTime = Date.now();
+            } else {
+                beatDetected = false;
+            }
+
+            // Update UI
+            document.getElementById('audio-bar').style.width = (audioLevel * 100) + '%';
+
+            requestAnimationFrame(analyzeAudio);
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // COLOR SPLASHES - Permanent color marks on canvas
+        // ═══════════════════════════════════════════════════════════════════════
+
+        let colorSplashes = [];
+
+        class ColorSplash {
+            constructor(x, y, hue) {
+                this.x = x;
+                this.y = y;
+                this.hue = hue;
+                this.radius = random(30, 80);
+                this.maxRadius = this.radius;
+                this.alpha = 40;
+                this.growing = true;
+                this.growSpeed = random(2, 5);
+            }
+
+            update() {
+                if (this.growing && this.radius < this.maxRadius * 1.5) {
+                    this.radius += this.growSpeed;
+                } else {
+                    this.growing = false;
+                }
+                // Slowly fade
+                this.alpha *= 0.998;
+            }
+
+            draw() {
+                if (this.alpha < 1) return;
+                push();
+                noStroke();
+                // Multiple layers for watercolor effect
+                for (let i = 3; i > 0; i--) {
+                    fill(this.hue, 80, 90, this.alpha * (i / 3) * 0.3);
+                    circle(this.x + random(-5, 5), this.y + random(-5, 5), this.radius * (i / 3));
+                }
+                pop();
+            }
+
+            isDead() {
+                return this.alpha < 1;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // LOCATION & TIME
+        // ═══════════════════════════════════════════════════════════════════════
+
+        let userCountry = { code: 'XX', name: 'Unknown', flag: '🌍', colors: ['#e85d04', '#4cc9f0'] };
+
+        const countryData = {
+            'MX': { name: 'México', flag: '🇲🇽', colors: ['#006847', '#CE1126'] },
+            'US': { name: 'United States', flag: '🇺🇸', colors: ['#3C3B6E', '#B22234'] },
+            'ES': { name: 'España', flag: '🇪🇸', colors: ['#AA151B', '#F1BF00'] },
+            'AR': { name: 'Argentina', flag: '🇦🇷', colors: ['#74ACDF', '#F6B40E'] },
+            'BR': { name: 'Brasil', flag: '🇧🇷', colors: ['#009739', '#FEDD00'] },
+            'CO': { name: 'Colombia', flag: '🇨🇴', colors: ['#FCD116', '#003893'] },
+            'JP': { name: '日本', flag: '🇯🇵', colors: ['#BC002D', '#FFFFFF'] },
+            'GB': { name: 'United Kingdom', flag: '🇬🇧', colors: ['#012169', '#C8102E'] },
+            'DE': { name: 'Deutschland', flag: '🇩🇪', colors: ['#000000', '#DD0000'] },
+            'FR': { name: 'France', flag: '🇫🇷', colors: ['#002395', '#ED2939'] },
+        };
+
+        async function detectLocation() {
+            try {
+                const response = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,city');
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const code = data.countryCode || 'XX';
+                    const cityName = data.city || '';
+                    if (countryData[code]) {
+                        userCountry = { code, ...countryData[code] };
+                        if (cityName) userCountry.name = `${cityName}, ${countryData[code].name}`;
+                    } else {
+                        userCountry = { code, name: data.country || 'Unknown', flag: '🌍', colors: ['#e85d04', '#4cc9f0'] };
+                    }
+                    document.getElementById('country-flag').textContent = userCountry.flag;
+                    document.getElementById('country-name').textContent = userCountry.name;
+                }
+            } catch (e) {
+                document.getElementById('country-name').textContent = 'Global';
+            }
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
+        }
+
+        setInterval(updateTime, 1000);
+        updateTime();
+        detectLocation();
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // P5.JS PARAMETERS
+        // ═══════════════════════════════════════════════════════════════════════
+
+        let params = {
+            seed: 42,
+            particleCount: 2000,
+            attractorCount: 4,
+            forceStrength: 2.0,
+            pulseSpeed: 0.015,
+            trailOpacity: 8,
+            noiseInfluence: 0.5
+        };
+
+        let defaultParams = {...params};
+        let particles = [];
+        let attractors = [];
+        let letterParticles = [];
+        let time = 0;
+        let globalHueShift = 0;
+
+        const warmColor = { h: 25, s: 95, b: 90 };
+        const coolColor = { h: 195, s: 70, b: 95 };
+
+        function setup() {
+            let container = document.getElementById('canvas-container');
+            let canvas = createCanvas(container.offsetWidth, container.offsetHeight);
+            canvas.parent('canvas-container');
+            colorMode(HSB, 360, 100, 100, 100);
+            textFont('Space Mono');
+            initializeSystem();
+        }
+
+        function windowResized() {
+            let container = document.getElementById('canvas-container');
+            resizeCanvas(container.offsetWidth, container.offsetHeight);
+            initializeSystem();
+        }
+
+        function initializeSystem() {
+            randomSeed(params.seed);
+            noiseSeed(params.seed);
+            time = 0;
+            document.getElementById('canvas-container').setAttribute('data-seed', params.seed);
+
+            attractors = [];
+            for (let i = 0; i < params.attractorCount; i++) {
+                let angle = (TWO_PI / params.attractorCount) * i + random(-0.3, 0.3);
+                let dist = random(width * 0.1, width * 0.35);
+                attractors.push({
+                    x: width/2 + cos(angle) * dist,
+                    y: height/2 + sin(angle) * dist,
+                    phase: random(TWO_PI),
+                    frequency: random(0.8, 1.2),
+                    strength: random(0.7, 1.3),
+                    isRepulsor: random() < 0.25
+                });
+            }
+
+            particles = [];
+            for (let i = 0; i < params.particleCount; i++) {
+                particles.push(new Particle());
+            }
+            background(10);
+        }
+
+        function draw() {
+            // Audio-reactive trail opacity
+            let dynamicTrailOpacity = params.trailOpacity;
+            if (audioEnabled) {
+                dynamicTrailOpacity = params.trailOpacity * (1 - bassLevel * 0.7);
+                // Shift global hue based on mid frequencies
+                globalHueShift = midLevel * 60;
+            }
+
+            push();
+            colorMode(RGB);
+            fill(10, 10, 10, dynamicTrailOpacity);
+            noStroke();
+            rect(0, 0, width, height);
+            pop();
+
+            // Audio-reactive time speed
+            let timeSpeed = params.pulseSpeed;
+            if (audioEnabled) {
+                timeSpeed = params.pulseSpeed * (1 + audioLevel * 3);
+            }
+            time += timeSpeed;
+
+            // Draw color splashes first (behind particles)
+            for (let i = colorSplashes.length - 1; i >= 0; i--) {
+                colorSplashes[i].update();
+                colorSplashes[i].draw();
+                if (colorSplashes[i].isDead()) {
+                    colorSplashes.splice(i, 1);
+                }
+            }
+
+            // Audio-reactive force multiplier
+            let forceMultiplier = 1;
+            if (audioEnabled) {
+                forceMultiplier = 1 + bassLevel * 2;
+                // Beat flash
+                if (beatDetected) {
+                    push();
+                    fill(globalHueShift + 30, 80, 100, 5);
+                    rect(0, 0, width, height);
+                    pop();
+                }
+            }
+
+            for (let p of particles) {
+                p.update(forceMultiplier);
+                p.draw();
+                if (p.isDead()) p.respawn();
+            }
+
+            // Letter particles
+            for (let i = letterParticles.length - 1; i >= 0; i--) {
+                letterParticles[i].update(forceMultiplier);
+                letterParticles[i].draw();
+                if (letterParticles[i].isDead()) {
+                    letterParticles.splice(i, 1);
+                }
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // PARTICLE CLASS
+        // ═══════════════════════════════════════════════════════════════════════
+
+        class Particle {
+            constructor() {
+                this.respawn();
+                this.history = [];
+                this.maxHistory = 5;
+            }
+
+            respawn() {
+                let edge = floor(random(4));
+                switch(edge) {
+                    case 0: this.pos = createVector(random(width), 0); break;
+                    case 1: this.pos = createVector(width, random(height)); break;
+                    case 2: this.pos = createVector(random(width), height); break;
+                    case 3: this.pos = createVector(0, random(height)); break;
+                }
+                let toCenter = createVector(width/2 - this.pos.x, height/2 - this.pos.y);
+                toCenter.normalize().rotate(random(-0.5, 0.5));
+                this.vel = toCenter.mult(random(1, 3));
+                this.acc = createVector(0, 0);
+                this.life = 255;
+                this.history = [];
+            }
+
+            update(forceMultiplier = 1) {
+                if (frameCount % 2 === 0) {
+                    this.history.push(this.pos.copy());
+                    if (this.history.length > this.maxHistory) this.history.shift();
+                }
+                this.acc.mult(0);
+                for (let att of attractors) {
+                    let force = createVector(att.x - this.pos.x, att.y - this.pos.y);
+                    let dist = constrain(force.mag(), 50, 500);
+                    let pulse = sin(time * att.frequency + att.phase) * 0.5 + 0.5;
+                    let strength = params.forceStrength * att.strength * pulse * forceMultiplier;
+                    let forceMag = strength * 100 / (dist * dist) * (att.isRepulsor ? -1 : 1);
+                    force.normalize().mult(forceMag);
+                    this.acc.add(force);
+                }
+                let noiseAngle = noise(this.pos.x * 0.003, this.pos.y * 0.003, time * 0.5) * TWO_PI * 4;
+                let noiseForce = createVector(cos(noiseAngle), sin(noiseAngle)).mult(params.noiseInfluence);
+                this.acc.add(noiseForce);
+                this.vel.add(this.acc).limit(8);
+                this.pos.add(this.vel);
+                this.life -= 0.3;
+            }
+
+            draw() {
+                let speed = this.vel.mag();
+                let speedNorm = constrain(map(speed, 0, 6, 0, 1), 0, 1);
+                let h = lerp(coolColor.h, warmColor.h, speedNorm) + globalHueShift;
+                let s = lerp(coolColor.s, warmColor.s, speedNorm);
+                let b = lerp(coolColor.b, warmColor.b, speedNorm);
+
+                noFill();
+                beginShape();
+                for (let i = 0; i < this.history.length; i++) {
+                    let alpha = map(i, 0, this.history.length, 10, 40);
+                    stroke(h % 360, s, b, alpha);
+                    strokeWeight(map(i, 0, this.history.length, 0.5, 1.5));
+                    vertex(this.history[i].x, this.history[i].y);
+                }
+                vertex(this.pos.x, this.pos.y);
+                endShape();
+                noStroke();
+                fill(h % 360, s, b, 60);
+                circle(this.pos.x, this.pos.y, map(speed, 0, 6, 1.5, 4));
+            }
+
+            isDead() {
+                return this.pos.x < -50 || this.pos.x > width + 50 ||
+                       this.pos.y < -50 || this.pos.y > height + 50 ||
+                       this.life < 0 || this.vel.mag() < 0.1;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // GELATINOUS LETTER PARTICLE WITH COLOR SPLASH
+        // ═══════════════════════════════════════════════════════════════════════
+
+        class LetterParticle {
+            constructor(letter, startX) {
+                this.letter = letter;
+                this.pos = createVector(startX, -40);
+                this.vel = createVector(random(-0.5, 0.5), random(2, 4));
+                this.acc = createVector(0, 0);
+                this.life = 1200;
+                this.baseSize = random(24, 40);
+                this.size = this.baseSize;
+                this.rotation = 0;
+                this.rotationSpeed = random(-0.03, 0.03);
+                this.hue = random(360); // Random color for splash
+                this.falling = true;
+                this.fallFrames = random(50, 100);
+                this.hasSplashed = false;
+
+                // Gelatinous properties
+                this.pulsePhase = random(TWO_PI);
+                this.pulseSpeed = random(0.08, 0.15);
+                this.pulseAmount = random(0.3, 0.5);
+                this.squashX = 1;
+                this.squashY = 1;
+                this.targetSquashX = 1;
+                this.targetSquashY = 1;
+            }
+
+            update(forceMultiplier = 1) {
+                this.acc.mult(0);
+
+                // Gelatinous pulse
+                this.pulsePhase += this.pulseSpeed;
+                let pulse = sin(this.pulsePhase);
+                this.size = this.baseSize * (1 + pulse * this.pulseAmount);
+
+                // Squash effect
+                this.squashX += (this.targetSquashX - this.squashX) * 0.15;
+                this.squashY += (this.targetSquashY - this.squashY) * 0.15;
+                this.squashX += sin(this.pulsePhase * 1.5) * 0.1;
+                this.squashY += cos(this.pulsePhase * 1.5) * 0.1;
+
+                if (this.falling) {
+                    this.acc.add(createVector(sin(frameCount * 0.08 + this.pos.x * 0.02) * 0.15, 0.2));
+                    this.fallFrames--;
+
+                    if (this.fallFrames <= 0 || this.pos.y > height * 0.25) {
+                        this.falling = false;
+
+                        // CREATE COLOR SPLASH when landing!
+                        if (!this.hasSplashed) {
+                            this.hasSplashed = true;
+                            // Multiple splashes for watercolor effect
+                            for (let i = 0; i < 3; i++) {
+                                colorSplashes.push(new ColorSplash(
+                                    this.pos.x + random(-20, 20),
+                                    this.pos.y + random(-20, 20),
+                                    this.hue + random(-20, 20)
+                                ));
+                            }
+                        }
+
+                        this.targetSquashX = 1.4;
+                        this.targetSquashY = 0.6;
+                        setTimeout(() => { this.targetSquashX = 0.8; this.targetSquashY = 1.3; }, 100);
+                        setTimeout(() => { this.targetSquashX = 1; this.targetSquashY = 1; }, 200);
+                    }
+                } else {
+                    for (let att of attractors) {
+                        let force = createVector(att.x - this.pos.x, att.y - this.pos.y);
+                        let dist = constrain(force.mag(), 50, 500);
+                        let attractPulse = sin(time * att.frequency + att.phase) * 0.5 + 0.5;
+                        let strength = params.forceStrength * att.strength * attractPulse * 0.6 * forceMultiplier;
+                        let forceMag = strength * 100 / (dist * dist) * (att.isRepulsor ? -1 : 1);
+                        force.normalize().mult(forceMag);
+                        this.acc.add(force);
+                    }
+                    let noiseAngle = noise(this.pos.x * 0.003, this.pos.y * 0.003, time * 0.5) * TWO_PI * 4;
+                    let noiseForce = createVector(cos(noiseAngle), sin(noiseAngle)).mult(params.noiseInfluence * 0.7);
+                    this.acc.add(noiseForce);
+
+                    // Occasionally splash more color while moving
+                    if (random() < 0.01) {
+                        colorSplashes.push(new ColorSplash(this.pos.x, this.pos.y, this.hue + random(-30, 30)));
+                    }
+                }
+
+                this.vel.add(this.acc).limit(this.falling ? 6 : 3.5);
+                this.pos.add(this.vel);
+                this.rotation += this.rotationSpeed;
+                this.life -= 0.4;
+                if (!this.falling) this.rotationSpeed *= 0.97;
+            }
+
+            draw() {
+                let alpha = map(this.life, 0, 1200, 0, 100);
+
+                push();
+                translate(this.pos.x, this.pos.y);
+                rotate(this.rotation);
+                scale(this.squashX, this.squashY);
+
+                noStroke();
+                // Outer glow with letter's color
+                fill(this.hue, 80, 100, alpha * 0.15);
+                textSize(this.size + 20);
+                textAlign(CENTER, CENTER);
+                text(this.letter, 0, 0);
+
+                // Middle glow
+                fill(this.hue, 85, 100, alpha * 0.3);
+                textSize(this.size + 10);
+                text(this.letter, 0, 0);
+
+                // Main letter
+                fill(this.hue, 90, 100, alpha);
+                textSize(this.size);
+                text(this.letter, 0, 0);
+
+                // Bright core
+                fill(this.hue, 30, 100, alpha * 0.7);
+                textSize(this.size - 6);
+                text(this.letter, 0, 0);
+
+                pop();
+            }
+
+            isDead() {
+                return this.pos.x < -150 || this.pos.x > width + 150 ||
+                       this.pos.y < -150 || this.pos.y > height + 150 ||
+                       this.life < 0;
+            }
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // DROP MESSAGE
+        // ═══════════════════════════════════════════════════════════════════════
+
+        function dropMessage() {
+            let input = document.getElementById('message-input');
+            let message = input.value.trim().toUpperCase();
+            if (message.length === 0) return;
+
+            let totalWidth = message.length * 35;
+            let startX = (width - totalWidth) / 2;
+
+            for (let i = 0; i < message.length; i++) {
+                let char = message[i];
+                if (char !== ' ') {
+                    setTimeout(() => {
+                        let x = startX + i * 35 + random(-15, 15);
+                        letterParticles.push(new LetterParticle(char, x));
+                    }, i * 100);
+                }
+            }
+            input.value = '';
+            input.focus();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('message-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') dropMessage();
+            });
+        });
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // UI HANDLERS
+        // ═══════════════════════════════════════════════════════════════════════
+
+        function updateParam(paramName, value) {
+            params[paramName] = parseFloat(value);
+            document.getElementById(paramName + '-val').textContent = value;
+        }
+
+        function updateSeedDisplay() {
+            document.getElementById('seed-display').textContent = String(params.seed).padStart(6, '0');
+            document.getElementById('seed-input').value = params.seed;
+        }
+
+        function updateSeed() {
+            let newSeed = parseInt(document.getElementById('seed-input').value);
+            if (newSeed && newSeed > 0) {
+                params.seed = newSeed;
+                updateSeedDisplay();
+                initializeSystem();
+            }
+        }
+
+        function previousSeed() { params.seed = Math.max(1, params.seed - 1); updateSeedDisplay(); initializeSystem(); }
+        function nextSeed() { params.seed++; updateSeedDisplay(); initializeSystem(); }
+        function randomSeedAndUpdate() { params.seed = Math.floor(Math.random() * 999999) + 1; updateSeedDisplay(); initializeSystem(); }
+
+        window.addEventListener('load', updateSeedDisplay);
+    </script>
+</body>
+</html>
