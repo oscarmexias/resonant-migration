@@ -1,0 +1,59 @@
+{
+  "name": "共鳴移動 — Resonant Migration",
+  "short_name": "Resonant Migration",
+  "description": "Interactive generative art that responds to sound. Built with curiosity and too much coffee.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "any",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a0a' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23e85d04'>共</text></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%230a0a0a' width='100' height='100' rx='20'/><text x='50' y='65' font-size='50' text-anchor='middle' fill='%23e85d04'>共</text></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "categories": ["art", "entertainment"],
+  "lang": "en",
+  "dir": "ltr",
+  "author": {
+    "name": "Oscar Mejía",
+    "url": "https://github.com/oscarmexias"
+  },
+  "created": "2026-02",
+  "version": "3.0.0",
+  "license": "MIT",
+  "repository": "https://github.com/oscarmexias/resonant-migration",
+  "keywords": [
+    "generative art",
+    "p5.js",
+    "audio reactive",
+    "creative coding",
+    "vibe coding",
+    "interactive",
+    "particles",
+    "flow fields"
+  ],
+  "technical": {
+    "framework": "Vanilla JavaScript + p5.js",
+    "audio": "Web Audio API",
+    "rendering": "HTML5 Canvas",
+    "build": "None (single HTML file)",
+    "ai_assisted": true,
+    "ai_tool": "Claude (Anthropic)"
+  },
+  "philosophy": {
+    "concept": "Resonant Migration (共鳴移動) explores the relationship between movement and environment. Particles migrate across the canvas, influenced by invisible attractors and responding to ambient sound.",
+    "inspiration": [
+      "Ink spreading in water",
+      "Bird flocking patterns",
+      "Late night ambient techno sessions"
+    ]
+  }
+}

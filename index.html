@@ -2,30 +2,34 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#0a0a0a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>共鳴移動 — Resonant Migration</title>
+    <link rel="manifest" href="manifest.json">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100;300;400;500&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary: #0a0a0a;
             --bg-secondary: #111111;
-            --orange: #e85d04;
-            --orange-dim: #ff6b0033;
-            --cyan: #4cc9f0;
-            --cyan-dim: #4cc9f022;
+            --accent-1: #e85d04;
+            --accent-2: #4cc9f0;
+            --accent-1-dim: #ff6b0033;
+            --accent-2-dim: #4cc9f022;
             --white: #f0f0f0;
             --gray: #555555;
             --gray-light: #888888;
         }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        ::selection { background: var(--orange); color: var(--bg-primary); }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        ::selection { background: var(--accent-1); color: var(--bg-primary); }
+        html, body { height: 100%; overflow: hidden; }
         body {
             font-family: 'Noto Sans JP', 'Space Mono', sans-serif;
             background: var(--bg-primary);
             color: var(--white);
-            min-height: 100vh;
-            overflow-x: hidden;
+            touch-action: manipulation;
         }
         body::before {
             content: '';
@@ -36,43 +40,162 @@
             pointer-events: none;
             z-index: 1000;
         }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* HEADER */
+        /* ═══════════════════════════════════════════════════════════════════════ */
         .header {
-            padding: 12px 30px;
+            padding: 12px 20px;
             border-bottom: 1px solid var(--gray);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
+            position: relative;
+            z-index: 100;
         }
-        .header-left { display: flex; align-items: center; gap: 15px; }
-        .header-left .title-jp { font-size: 24px; font-weight: 300; letter-spacing: 6px; color: var(--white); }
-        .header-left .title-en { font-family: 'Space Mono', monospace; font-size: 9px; letter-spacing: 2px; color: var(--orange); }
-        .header-center { display: flex; align-items: center; gap: 20px; font-family: 'Space Mono', monospace; font-size: 11px; }
-        .location-display { display: flex; align-items: center; gap: 8px; color: var(--cyan); }
-        .location-flag { font-size: 18px; }
+        .header-left { display: flex; align-items: center; gap: 12px; }
+        .title-jp {
+            font-size: 22px;
+            font-weight: 300;
+            letter-spacing: 4px;
+            color: var(--white);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        .title-jp:hover { color: var(--accent-1); text-shadow: 0 0 20px var(--accent-1); }
+        .title-jp::after {
+            content: '';
+            position: absolute;
+            bottom: -2px;
+            left: 0;
+            width: 0;
+            height: 1px;
+            background: var(--accent-1);
+            transition: width 0.3s ease;
+        }
+        .title-jp:hover::after { width: 100%; }
+        .title-en {
+            font-family: 'Space Mono', monospace;
+            font-size: 8px;
+            letter-spacing: 2px;
+            color: var(--accent-1);
+            opacity: 0.8;
+        }
+        .header-center {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+        }
+        .location-display {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--accent-2);
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+        .location-display:hover { transform: scale(1.05); }
+        .location-flag {
+            font-size: 16px;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-3px); }
+        }
         .location-name { color: var(--white); letter-spacing: 1px; }
-        .time-display { color: var(--orange); font-size: 14px; letter-spacing: 2px; font-weight: bold; }
-        .header-right { display: flex; gap: 20px; font-family: 'Space Mono', monospace; font-size: 9px; color: var(--gray-light); }
-        .header-right .status { color: var(--cyan); }
-        .main { display: grid; grid-template-columns: 1fr 280px; height: calc(100vh - 55px); }
-        .art-section { padding: 15px; display: flex; flex-direction: column; }
+        .time-display {
+            color: var(--accent-1);
+            font-size: 12px;
+            letter-spacing: 2px;
+            font-weight: bold;
+            font-variant-numeric: tabular-nums;
+        }
+        .header-right {
+            display: flex;
+            gap: 15px;
+            font-family: 'Space Mono', monospace;
+            font-size: 8px;
+            color: var(--gray-light);
+        }
+        .status { color: var(--accent-2); }
+        .status-dot {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--accent-2);
+            margin-right: 4px;
+            animation: pulse-dot 2s ease-in-out infinite;
+        }
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+        .nav-links {
+            display: flex;
+            gap: 12px;
+        }
+        .nav-link {
+            color: var(--gray-light);
+            text-decoration: none;
+            font-size: 8px;
+            letter-spacing: 1px;
+            transition: all 0.2s ease;
+            position: relative;
+            padding: 4px 0;
+        }
+        .nav-link:hover { color: var(--accent-1); }
+        .nav-link::before {
+            content: '>';
+            opacity: 0;
+            margin-right: 4px;
+            transition: opacity 0.2s ease;
+        }
+        .nav-link:hover::before { opacity: 1; }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* MAIN LAYOUT - DESKTOP */
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        .main {
+            display: grid;
+            grid-template-columns: 1fr 280px;
+            height: calc(100vh - 55px);
+            height: calc(100dvh - 55px);
+        }
+        .art-section {
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
         #canvas-container {
             background: var(--bg-secondary);
             border: 1px solid var(--gray);
             position: relative;
             flex: 1;
             overflow: hidden;
+            border-radius: 2px;
         }
         #canvas-container::before {
-            content: 'GEN_ART_v2.049';
+            content: attr(data-version);
             position: absolute;
             top: 10px; left: 12px;
             font-family: 'Space Mono', monospace;
             font-size: 9px;
-            color: var(--orange);
+            color: var(--accent-1);
             letter-spacing: 2px;
             z-index: 10;
+            opacity: 0.7;
         }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* SIDEBAR - DESKTOP */
+        /* ═══════════════════════════════════════════════════════════════════════ */
         .sidebar {
             background: var(--bg-secondary);
             border-left: 1px solid var(--gray);
@@ -81,68 +204,536 @@
             flex-direction: column;
             gap: 12px;
             overflow-y: auto;
+            scrollbar-width: thin;
+            scrollbar-color: var(--gray) transparent;
         }
-        .sidebar-section { border-bottom: 1px solid #222; padding-bottom: 12px; }
+        .sidebar::-webkit-scrollbar { width: 4px; }
+        .sidebar::-webkit-scrollbar-track { background: transparent; }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--gray); border-radius: 2px; }
+
+        .sidebar-section {
+            border-bottom: 1px solid #222;
+            padding-bottom: 12px;
+            transition: all 0.3s ease;
+        }
         .sidebar-section:last-child { border-bottom: none; }
-        .sidebar-section h3 { font-weight: 300; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--gray-light); margin-bottom: 10px; }
-        .message-section { background: linear-gradient(180deg, var(--orange-dim), transparent); border: 1px solid var(--orange); padding: 10px; }
-        .message-section h3 { color: var(--orange); margin-bottom: 8px; }
-        .message-input-wrapper { display: flex; gap: 6px; }
-        .message-input { flex: 1; background: transparent; border: 1px solid var(--gray); color: var(--white); font-family: 'Space Mono', monospace; font-size: 11px; padding: 8px; }
-        .message-input:focus { outline: none; border-color: var(--orange); }
-        .message-input::placeholder { color: var(--gray); }
-        .btn-send { background: var(--orange); border: none; color: var(--bg-primary); font-family: 'Space Mono', monospace; font-size: 9px; padding: 8px 12px; cursor: pointer; font-weight: bold; }
-        .btn-send:hover { background: var(--cyan); }
-        .letter-hint { font-size: 8px; color: var(--gray); text-align: center; margin-top: 6px; }
+        .sidebar-section h3 {
+            font-weight: 300;
+            font-size: 9px;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gray-light);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .section-icon {
+            font-size: 12px;
+            transition: transform 0.3s ease;
+        }
+        .sidebar-section:hover .section-icon {
+            transform: rotate(10deg) scale(1.1);
+        }
+
+        /* Message Section */
+        .message-section {
+            background: linear-gradient(180deg, var(--accent-1-dim), transparent);
+            border: 1px solid var(--accent-1);
+            padding: 12px;
+            border-radius: 2px;
+        }
+        .message-section h3 { color: var(--accent-1); }
+        .message-input-wrapper {
+            display: flex;
+            gap: 6px;
+            position: relative;
+        }
+        .message-input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--gray);
+            color: var(--white);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            padding: 10px 12px;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        .message-input:focus {
+            outline: none;
+            border-color: var(--accent-1);
+            box-shadow: 0 0 10px var(--accent-1-dim);
+        }
+        .message-input::placeholder {
+            color: var(--gray);
+            transition: opacity 0.3s ease;
+        }
+        .btn-send {
+            background: var(--accent-1);
+            border: none;
+            color: var(--bg-primary);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-send::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.4s ease, height 0.4s ease;
+        }
+        .btn-send:hover {
+            background: var(--accent-2);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 201, 240, 0.3);
+        }
+        .btn-send:active::before {
+            width: 200px;
+            height: 200px;
+        }
+        .letter-hint {
+            font-size: 8px;
+            color: var(--gray);
+            text-align: center;
+            margin-top: 8px;
+            opacity: 0.7;
+        }
 
         /* Audio Section */
-        .audio-section { background: linear-gradient(180deg, var(--cyan-dim), transparent); border: 1px solid var(--cyan); padding: 10px; }
-        .audio-section h3 { color: var(--cyan); }
-        .btn-audio { width: 100%; background: var(--cyan); border: none; color: var(--bg-primary); font-family: 'Space Mono', monospace; font-size: 10px; padding: 10px; cursor: pointer; font-weight: bold; margin-top: 8px; }
-        .btn-audio:hover { background: var(--orange); }
-        .btn-audio.active { background: #22c55e; }
-        .audio-hint { font-size: 8px; color: var(--gray); text-align: center; margin-top: 6px; }
-        .audio-level { height: 4px; background: var(--gray); margin-top: 8px; border-radius: 2px; overflow: hidden; }
-        .audio-level-bar { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--orange)); width: 0%; transition: width 0.05s; }
+        .audio-section {
+            background: linear-gradient(180deg, var(--accent-2-dim), transparent);
+            border: 1px solid var(--accent-2);
+            padding: 12px;
+            border-radius: 2px;
+        }
+        .audio-section h3 { color: var(--accent-2); }
+        .btn-audio {
+            width: 100%;
+            background: var(--accent-2);
+            border: none;
+            color: var(--bg-primary);
+            font-family: 'Space Mono', monospace;
+            font-size: 10px;
+            padding: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        .btn-audio:hover {
+            background: var(--accent-1);
+            transform: translateY(-2px);
+        }
+        .btn-audio.active {
+            background: #22c55e;
+            animation: pulse-btn 2s ease-in-out infinite;
+        }
+        @keyframes pulse-btn {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+            50% { box-shadow: 0 0 0 8px rgba(34, 197, 94, 0); }
+        }
+        .audio-hint { font-size: 8px; color: var(--gray); text-align: center; margin-top: 8px; }
+        .audio-level {
+            height: 4px;
+            background: var(--gray);
+            margin-top: 10px;
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        .audio-level-bar {
+            height: 100%;
+            background: linear-gradient(90deg, var(--accent-2), var(--accent-1));
+            width: 0%;
+            transition: width 0.05s;
+            border-radius: 2px;
+        }
 
-        .seed-display { font-family: 'Space Mono', monospace; font-size: 20px; color: var(--orange); text-align: center; margin-bottom: 8px; letter-spacing: 2px; }
-        .seed-input { width: 100%; background: transparent; border: 1px solid var(--gray); color: var(--white); font-family: 'Space Mono', monospace; font-size: 11px; padding: 6px; text-align: center; margin-bottom: 6px; }
-        .seed-input:focus { outline: none; border-color: var(--orange); }
-        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
-        .btn { background: transparent; border: 1px solid var(--gray); color: var(--white); font-family: 'Space Mono', monospace; font-size: 8px; padding: 6px 4px; cursor: pointer; }
-        .btn:hover { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
-        .btn.primary { grid-column: span 2; background: var(--orange); border-color: var(--orange); color: var(--bg-primary); }
-        .btn.primary:hover { background: transparent; color: var(--orange); }
-        .control-item { margin-bottom: 10px; }
-        .control-item label { display: flex; justify-content: space-between; font-size: 8px; letter-spacing: 1px; color: var(--gray-light); margin-bottom: 5px; }
-        .control-item label span { color: var(--cyan); font-family: 'Space Mono', monospace; }
-        .slider { width: 100%; height: 2px; background: var(--gray); -webkit-appearance: none; cursor: pointer; }
-        .slider::-webkit-slider-thumb { -webkit-appearance: none; width: 8px; height: 8px; background: var(--orange); cursor: pointer; }
-        .music-section { margin-top: auto; padding-bottom: 0; flex-shrink: 0; }
-        .music-section h3 { display: flex; align-items: center; gap: 6px; }
-        .music-section h3::before { content: '♫'; color: var(--cyan); }
-        .spotify-embed { margin-top: 8px; }
+        /* Seed Section */
+        .seed-display {
+            font-family: 'Space Mono', monospace;
+            font-size: 20px;
+            color: var(--accent-1);
+            text-align: center;
+            margin-bottom: 8px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px var(--accent-1-dim);
+        }
+        .seed-input {
+            width: 100%;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--gray);
+            color: var(--white);
+            font-family: 'Space Mono', monospace;
+            font-size: 11px;
+            padding: 8px;
+            text-align: center;
+            margin-bottom: 8px;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        .seed-input:focus { outline: none; border-color: var(--accent-1); }
+        .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+        .btn {
+            background: transparent;
+            border: 1px solid var(--gray);
+            color: var(--white);
+            font-family: 'Space Mono', monospace;
+            font-size: 9px;
+            padding: 8px 6px;
+            cursor: pointer;
+            border-radius: 2px;
+            transition: all 0.2s ease;
+        }
+        .btn:hover {
+            background: var(--accent-1-dim);
+            border-color: var(--accent-1);
+            color: var(--accent-1);
+            transform: translateY(-1px);
+        }
+        .btn:active { transform: translateY(0); }
+        .btn.primary {
+            grid-column: span 2;
+            background: var(--accent-1);
+            border-color: var(--accent-1);
+            color: var(--bg-primary);
+        }
+        .btn.primary:hover {
+            background: transparent;
+            color: var(--accent-1);
+        }
+
+        /* Control Items */
+        .control-item { margin-bottom: 12px; }
+        .control-item label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 8px;
+            letter-spacing: 1px;
+            color: var(--gray-light);
+            margin-bottom: 6px;
+        }
+        .control-item label span {
+            color: var(--accent-2);
+            font-family: 'Space Mono', monospace;
+        }
+        .slider {
+            width: 100%;
+            height: 4px;
+            background: var(--gray);
+            -webkit-appearance: none;
+            cursor: pointer;
+            border-radius: 2px;
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px;
+            height: 12px;
+            background: var(--accent-1);
+            cursor: pointer;
+            border-radius: 50%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .slider::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+            box-shadow: 0 0 10px var(--accent-1);
+        }
+
+        /* Music Section */
+        .music-section {
+            margin-top: auto;
+            padding-bottom: 0;
+            flex-shrink: 0;
+        }
+        .music-section h3::before { content: '♫ '; color: var(--accent-2); }
+        .spotify-embed { margin-top: 10px; }
+        .spotify-embed iframe {
+            border-radius: 8px;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        .spotify-embed iframe:hover {
+            transform: scale(1.02);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* MOBILE FLOATING CONTROLS */
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        .mobile-fab {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 500;
+            gap: 12px;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+        .fab-btn {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: all 0.3s ease;
+        }
+        .fab-btn:active { transform: scale(0.95); }
+        .fab-message {
+            background: var(--accent-1);
+            color: var(--bg-primary);
+        }
+        .fab-audio {
+            background: var(--accent-2);
+            color: var(--bg-primary);
+        }
+        .fab-audio.active {
+            background: #22c55e;
+            animation: pulse-btn 2s ease-in-out infinite;
+        }
+        .fab-menu {
+            background: var(--bg-secondary);
+            border: 1px solid var(--gray);
+            color: var(--white);
+        }
+
+        /* Mobile Bottom Sheet */
+        .bottom-sheet {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--gray);
+            border-radius: 20px 20px 0 0;
+            z-index: 600;
+            transform: translateY(100%);
+            transition: transform 0.3s ease;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .bottom-sheet.open { transform: translateY(0); }
+        .bottom-sheet-handle {
+            width: 40px;
+            height: 4px;
+            background: var(--gray);
+            border-radius: 2px;
+            margin: 12px auto;
+        }
+        .bottom-sheet-content { padding: 0 20px 30px; }
+        .sheet-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 550;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .sheet-overlay.open { opacity: 1; }
+
+        /* Mobile Message Input */
+        .mobile-message-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--gray);
+            padding: 12px 16px;
+            padding-bottom: max(12px, env(safe-area-inset-bottom));
+            z-index: 400;
+            gap: 10px;
+        }
+        .mobile-message-input {
+            flex: 1;
+            background: rgba(0,0,0,0.3);
+            border: 1px solid var(--gray);
+            color: var(--white);
+            font-family: 'Space Mono', monospace;
+            font-size: 14px;
+            padding: 14px 16px;
+            border-radius: 25px;
+            transition: all 0.2s ease;
+        }
+        .mobile-message-input:focus {
+            outline: none;
+            border-color: var(--accent-1);
+        }
+        .mobile-send-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--accent-1);
+            border: none;
+            color: var(--bg-primary);
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .mobile-send-btn:active {
+            transform: scale(0.9);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* INFO MODAL / ABOUT SECTION */
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 900;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .modal-overlay.open { display: flex; opacity: 1; }
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--gray);
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 30px;
+            position: relative;
+            border-radius: 4px;
+        }
+        .modal-close {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: none;
+            border: none;
+            color: var(--gray-light);
+            font-size: 24px;
+            cursor: pointer;
+            transition: color 0.2s ease;
+        }
+        .modal-close:hover { color: var(--accent-1); }
+        .modal h2 {
+            font-weight: 300;
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--accent-1);
+        }
+        .modal-content {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--gray-light);
+        }
+        .modal-content p { margin-bottom: 16px; }
+        .modal-content a {
+            color: var(--accent-2);
+            text-decoration: none;
+        }
+        .modal-content a:hover { text-decoration: underline; }
+        .modal-content .signature {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid var(--gray);
+            font-style: italic;
+            color: var(--gray);
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* ANIMATIONS */
+        /* ═══════════════════════════════════════════════════════════════════════ */
         .glitch:hover { animation: glitch 0.3s ease; }
         @keyframes glitch {
-            0%, 100% { transform: translate(0); }
-            20% { transform: translate(-2px, 2px); }
-            40% { transform: translate(2px, -2px); }
-            60% { transform: translate(-2px, -2px); }
-            80% { transform: translate(2px, 2px); }
+            0%, 100% { transform: translate(0); filter: hue-rotate(0deg); }
+            20% { transform: translate(-2px, 2px); filter: hue-rotate(10deg); }
+            40% { transform: translate(2px, -2px); filter: hue-rotate(-10deg); }
+            60% { transform: translate(-2px, -2px); filter: hue-rotate(5deg); }
+            80% { transform: translate(2px, 2px); filter: hue-rotate(-5deg); }
         }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes typewriter-cursor {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* ═══════════════════════════════════════════════════════════════════════ */
+        /* MOBILE RESPONSIVE */
+        /* ═══════════════════════════════════════════════════════════════════════ */
         @media (max-width: 900px) {
-            .main { grid-template-columns: 1fr; grid-template-rows: 1fr auto; }
-            .header { flex-wrap: wrap; padding: 10px 15px; }
-            .header-center { order: 3; width: 100%; justify-content: center; margin-top: 8px; }
-            .art-section { padding: 10px; min-height: 50vh; }
-            .sidebar { border-left: none; border-top: 1px solid var(--gray); max-height: 45vh; }
+            .main {
+                grid-template-columns: 1fr;
+                height: calc(100vh - 55px - 76px);
+                height: calc(100dvh - 55px - 76px);
+            }
+            .header {
+                padding: 10px 15px;
+            }
+            .header-left { gap: 8px; }
+            .title-jp { font-size: 18px; letter-spacing: 2px; }
+            .title-en { display: none; }
+            .header-center {
+                display: none;
+            }
+            .header-right {
+                font-size: 7px;
+                gap: 10px;
+            }
+            .nav-links { display: none; }
+            .art-section {
+                padding: 8px;
+                height: 100%;
+            }
+            .sidebar { display: none; }
+            .mobile-fab { display: flex; }
+            .mobile-message-bar { display: flex; }
+            .bottom-sheet { display: block; }
+            .sheet-overlay { display: block; }
+        }
+
+        @media (max-width: 480px) {
+            .header { padding: 8px 12px; }
+            .title-jp { font-size: 16px; }
+            .mobile-fab { bottom: 90px; right: 16px; }
+            .fab-btn { width: 50px; height: 50px; font-size: 20px; }
+        }
+
+        /* Safe area support */
+        @supports (padding: max(0px)) {
+            .mobile-message-bar {
+                padding-bottom: max(12px, env(safe-area-inset-bottom));
+            }
+            .bottom-sheet-content {
+                padding-bottom: max(30px, env(safe-area-inset-bottom));
+            }
         }
     </style>
 </head>
 <body>
     <header class="header">
         <div class="header-left">
-            <div class="title-jp glitch">共鳴移動</div>
+            <div class="title-jp glitch" onclick="showAboutModal()">共鳴移動</div>
             <div class="title-en">RESONANT MIGRATION</div>
         </div>
         <div class="header-center">
@@ -153,35 +744,39 @@
             <div class="time-display" id="current-time">--:--:--</div>
         </div>
         <div class="header-right">
-            <span>SYS: <span class="status">ACTIVE</span></span>
+            <span><span class="status-dot"></span>SYS: <span class="status">ACTIVE</span></span>
             <span>🎤: <span id="audio-status">OFF</span></span>
         </div>
+        <nav class="nav-links">
+            <a href="#" class="nav-link" onclick="showAboutModal(); return false;">ABOUT</a>
+            <a href="manifest.json" class="nav-link" target="_blank">MANIFEST</a>
+        </nav>
     </header>
 
     <main class="main">
         <section class="art-section">
-            <div id="canvas-container" data-seed="42"></div>
+            <div id="canvas-container" data-version="GEN_ART_v3.0" data-seed="42"></div>
         </section>
 
         <aside class="sidebar">
             <div class="sidebar-section message-section">
-                <h3>メッセージ — Drop & Splash</h3>
+                <h3><span class="section-icon">✨</span> メッセージ — Drop & Splash</h3>
                 <div class="message-input-wrapper">
-                    <input type="text" class="message-input" id="message-input" placeholder="Type to splash colors..." maxlength="20">
+                    <input type="text" class="message-input" id="message-input" placeholder="" maxlength="30">
                     <button class="btn-send" onclick="dropMessage()">DROP</button>
                 </div>
-                <div class="letter-hint">Letters fall & splash colors ✨</div>
+                <div class="letter-hint">Letters fall & splash colors onto the canvas</div>
             </div>
 
             <div class="sidebar-section audio-section">
-                <h3>🎤 Audio Reactive</h3>
+                <h3><span class="section-icon">🎤</span> Audio Reactive</h3>
                 <button class="btn-audio" id="audio-btn" onclick="toggleAudio()">ENABLE MICROPHONE</button>
                 <div class="audio-level"><div class="audio-level-bar" id="audio-bar"></div></div>
                 <div class="audio-hint">Art reacts to music playing around you</div>
             </div>
 
             <div class="sidebar-section">
-                <h3>シード — Seed</h3>
+                <h3><span class="section-icon">🎲</span> シード — Seed</h3>
                 <div class="seed-display" id="seed-display">000042</div>
                 <input type="number" class="seed-input" id="seed-input" value="42" onchange="updateSeed()">
                 <div class="btn-row">
@@ -192,18 +787,18 @@
             </div>
 
             <div class="sidebar-section">
-                <h3>パラメータ — Params</h3>
+                <h3><span class="section-icon">⚙️</span> パラメータ — Style</h3>
                 <div class="control-item">
-                    <label>PARTICLES <span id="particleCount-val">2000</span></label>
-                    <input type="range" class="slider" id="particleCount" min="500" max="5000" value="2000" oninput="updateParam('particleCount', this.value)">
+                    <label>FLOW CHAOS <span id="noiseScale-val">0.003</span></label>
+                    <input type="range" class="slider" id="noiseScale" min="0.001" max="0.01" step="0.001" value="0.003" oninput="updateParam('noiseScale', this.value)">
                 </div>
                 <div class="control-item">
-                    <label>FORCE <span id="forceStrength-val">2.0</span></label>
-                    <input type="range" class="slider" id="forceStrength" min="0.5" max="5" step="0.1" value="2" oninput="updateParam('forceStrength', this.value)">
+                    <label>GRAVITY WELLS <span id="attractorCount-val">4</span></label>
+                    <input type="range" class="slider" id="attractorCount" min="2" max="8" step="1" value="4" oninput="updateAttractorCount(this.value)">
                 </div>
                 <div class="control-item">
-                    <label>TRAILS <span id="trailOpacity-val">8</span></label>
-                    <input type="range" class="slider" id="trailOpacity" min="1" max="30" value="8" oninput="updateParam('trailOpacity', this.value)">
+                    <label>COLOR DRIFT <span id="colorDrift-val">0</span></label>
+                    <input type="range" class="slider" id="colorDrift" min="0" max="180" step="1" value="0" oninput="updateParam('colorDrift', this.value)">
                 </div>
             </div>
 
@@ -217,31 +812,265 @@
                         height="152"
                         frameBorder="0"
                         allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                        loading="eager">
+                        loading="lazy">
                     </iframe>
                 </div>
             </div>
         </aside>
     </main>
 
+    <!-- Mobile Controls -->
+    <div class="mobile-fab">
+        <button class="fab-btn fab-audio" id="mobile-audio-btn" onclick="toggleAudio()">🎤</button>
+        <button class="fab-btn fab-menu" onclick="openBottomSheet()">☰</button>
+    </div>
+
+    <div class="mobile-message-bar">
+        <input type="text" class="mobile-message-input" id="mobile-message-input" placeholder="" maxlength="30">
+        <button class="mobile-send-btn" onclick="dropMessageMobile()">↑</button>
+    </div>
+
+    <!-- Bottom Sheet for Mobile Controls -->
+    <div class="sheet-overlay" id="sheet-overlay" onclick="closeBottomSheet()"></div>
+    <div class="bottom-sheet" id="bottom-sheet">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-content">
+            <div class="sidebar-section">
+                <h3><span class="section-icon">🎲</span> Seed</h3>
+                <div class="seed-display" id="mobile-seed-display">000042</div>
+                <div class="btn-row">
+                    <button class="btn" onclick="previousSeed()">← PREV</button>
+                    <button class="btn" onclick="nextSeed()">NEXT →</button>
+                    <button class="btn primary" onclick="randomSeedAndUpdate()">RANDOM</button>
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <h3><span class="section-icon">⚙️</span> Style</h3>
+                <div class="control-item">
+                    <label>FLOW CHAOS <span id="mobile-noiseScale-val">0.003</span></label>
+                    <input type="range" class="slider" id="mobile-noiseScale" min="0.001" max="0.01" step="0.001" value="0.003" oninput="updateParam('noiseScale', this.value)">
+                </div>
+                <div class="control-item">
+                    <label>GRAVITY WELLS <span id="mobile-attractorCount-val">4</span></label>
+                    <input type="range" class="slider" id="mobile-attractorCount" min="2" max="8" step="1" value="4" oninput="updateAttractorCount(this.value)">
+                </div>
+                <div class="control-item">
+                    <label>COLOR DRIFT <span id="mobile-colorDrift-val">0</span></label>
+                    <input type="range" class="slider" id="mobile-colorDrift" min="0" max="180" step="1" value="0" oninput="updateParam('colorDrift', this.value)">
+                </div>
+            </div>
+            <div class="sidebar-section">
+                <button class="btn" style="width:100%; margin-top: 10px;" onclick="showAboutModal(); closeBottomSheet();">ABOUT THIS PROJECT</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- About Modal -->
+    <div class="modal-overlay" id="about-modal" onclick="closeAboutModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <button class="modal-close" onclick="closeAboutModal()">×</button>
+            <h2>How I Was Built</h2>
+            <div class="modal-content">
+                <p>Hey. So you want to know how this thing came to be? Cool, let me tell you.</p>
+
+                <p>It started with me wanting to play around with generative art. I had this idea of particles flowing around attractors, kind of like watching ink spread in water or birds flocking. Nothing groundbreaking, just... satisfying to look at.</p>
+
+                <p>I'm Oscar, by the way. I work in product but I've always been drawn to creative coding. This project was born during a late night session where I was listening to ambient techno and thought: "what if the art could feel the music?"</p>
+
+                <p>The whole thing was built using what people are calling "vibe coding" these days - basically me describing what I wanted to Claude (yes, an AI) and iterating until it felt right. Some might call it cheating. I call it collaboration. The ideas are mine, the execution is... assisted.</p>
+
+                <p>The Japanese title 共鳴移動 (Kyōmei Idō) means "Resonant Migration." It's about movement that responds to its environment. The particles migrate, the colors resonate with sound, and honestly, I just thought it sounded cool.</p>
+
+                <p>Tech stuff if you care: p5.js for the canvas, Web Audio API for the microphone input, vanilla JS for everything else. No frameworks, no build tools, just one HTML file doing its thing. Sometimes simple is better.</p>
+
+                <p>The color splash thing when letters fall? That was a happy accident. I wanted the letters to leave a mark, and the watercolor effect just kind of emerged from layering circles with varying opacity.</p>
+
+                <p>If you're reading this, thanks for caring enough to click. That means something.</p>
+
+                <div class="signature">
+                    — Oscar<br>
+                    February 2026<br>
+                    Made with curiosity and too much coffee.
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // ═══════════════════════════════════════════════════════════════════════
-        // AUDIO ANALYSIS - Microphone input for music reactivity
+        // EXISTENTIAL PLACEHOLDER - Typewriter Effect
+        // ═══════════════════════════════════════════════════════════════════════
+
+        const existentialQuestions = [
+            "What makes you feel alive?",
+            "Where do your thoughts go at 3am?",
+            "What would you tell your younger self?",
+            "Is this the life you imagined?",
+            "What are you running from?",
+            "Who do you become when no one's watching?",
+            "What silence are you afraid of?",
+            "What would you do if you weren't afraid?",
+            "What truth are you avoiding?",
+            "When did you last feel truly free?",
+            "What memories do you keep returning to?",
+            "What are you waiting for?",
+            "What does your soul need right now?",
+            "Who would you be without your fears?",
+            "What story are you telling yourself?"
+        ];
+
+        let currentQuestionIndex = 0;
+        let currentCharIndex = 0;
+        let isDeleting = false;
+        let typewriterTimeout = null;
+
+        function typewriterEffect(inputElement) {
+            if (!inputElement || document.activeElement === inputElement) return;
+
+            const currentQuestion = existentialQuestions[currentQuestionIndex];
+
+            if (!isDeleting) {
+                inputElement.placeholder = currentQuestion.substring(0, currentCharIndex + 1);
+                currentCharIndex++;
+
+                if (currentCharIndex === currentQuestion.length) {
+                    setTimeout(() => { isDeleting = true; typewriterEffect(inputElement); }, 3000);
+                    return;
+                }
+                typewriterTimeout = setTimeout(() => typewriterEffect(inputElement), 50 + Math.random() * 50);
+            } else {
+                inputElement.placeholder = currentQuestion.substring(0, currentCharIndex - 1);
+                currentCharIndex--;
+
+                if (currentCharIndex === 0) {
+                    isDeleting = false;
+                    currentQuestionIndex = (currentQuestionIndex + 1) % existentialQuestions.length;
+                    typewriterTimeout = setTimeout(() => typewriterEffect(inputElement), 500);
+                    return;
+                }
+                typewriterTimeout = setTimeout(() => typewriterEffect(inputElement), 30);
+            }
+        }
+
+        function startTypewriter() {
+            const desktopInput = document.getElementById('message-input');
+            const mobileInput = document.getElementById('mobile-message-input');
+
+            // Sync both inputs
+            currentCharIndex = 0;
+            isDeleting = false;
+            currentQuestionIndex = Math.floor(Math.random() * existentialQuestions.length);
+
+            function syncTypewriter() {
+                if (document.activeElement !== desktopInput && document.activeElement !== mobileInput) {
+                    const question = existentialQuestions[currentQuestionIndex];
+
+                    if (!isDeleting) {
+                        const text = question.substring(0, currentCharIndex + 1);
+                        desktopInput.placeholder = text;
+                        mobileInput.placeholder = text;
+                        currentCharIndex++;
+
+                        if (currentCharIndex === question.length) {
+                            setTimeout(() => { isDeleting = true; syncTypewriter(); }, 3000);
+                            return;
+                        }
+                        typewriterTimeout = setTimeout(syncTypewriter, 50 + Math.random() * 50);
+                    } else {
+                        const text = question.substring(0, currentCharIndex - 1);
+                        desktopInput.placeholder = text;
+                        mobileInput.placeholder = text;
+                        currentCharIndex--;
+
+                        if (currentCharIndex === 0) {
+                            isDeleting = false;
+                            currentQuestionIndex = (currentQuestionIndex + 1) % existentialQuestions.length;
+                            typewriterTimeout = setTimeout(syncTypewriter, 500);
+                            return;
+                        }
+                        typewriterTimeout = setTimeout(syncTypewriter, 30);
+                    }
+                } else {
+                    typewriterTimeout = setTimeout(syncTypewriter, 100);
+                }
+            }
+
+            syncTypewriter();
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // SESSION RANDOMIZATION
+        // ═══════════════════════════════════════════════════════════════════════
+
+        function generateSessionConfig() {
+            const colorSchemes = [
+                { accent1: '#e85d04', accent2: '#4cc9f0', warm: { h: 25, s: 95, b: 90 }, cool: { h: 195, s: 70, b: 95 } },
+                { accent1: '#f72585', accent2: '#4cc9f0', warm: { h: 330, s: 95, b: 97 }, cool: { h: 195, s: 70, b: 95 } },
+                { accent1: '#7209b7', accent2: '#3a0ca3', warm: { h: 280, s: 95, b: 72 }, cool: { h: 250, s: 95, b: 64 } },
+                { accent1: '#06d6a0', accent2: '#118ab2', warm: { h: 160, s: 97, b: 84 }, cool: { h: 197, s: 90, b: 70 } },
+                { accent1: '#ff006e', accent2: '#8338ec', warm: { h: 335, s: 100, b: 100 }, cool: { h: 265, s: 78, b: 93 } },
+                { accent1: '#fb5607', accent2: '#3a86ff', warm: { h: 22, s: 97, b: 98 }, cool: { h: 217, s: 77, b: 100 } },
+                { accent1: '#ffbe0b', accent2: '#fb5607', warm: { h: 44, s: 96, b: 100 }, cool: { h: 22, s: 97, b: 98 } },
+            ];
+
+            const scheme = colorSchemes[Math.floor(Math.random() * colorSchemes.length)];
+            const seed = Math.floor(Math.random() * 999999) + 1;
+            const noiseScale = 0.001 + Math.random() * 0.009;
+            const attractorCount = 2 + Math.floor(Math.random() * 7);
+            const colorDrift = Math.floor(Math.random() * 180);
+
+            return { scheme, seed, noiseScale, attractorCount, colorDrift };
+        }
+
+        function applySessionConfig(config) {
+            document.documentElement.style.setProperty('--accent-1', config.scheme.accent1);
+            document.documentElement.style.setProperty('--accent-2', config.scheme.accent2);
+            document.documentElement.style.setProperty('--accent-1-dim', config.scheme.accent1 + '33');
+            document.documentElement.style.setProperty('--accent-2-dim', config.scheme.accent2 + '22');
+
+            warmColor.h = config.scheme.warm.h;
+            warmColor.s = config.scheme.warm.s;
+            warmColor.b = config.scheme.warm.b;
+            coolColor.h = config.scheme.cool.h;
+            coolColor.s = config.scheme.cool.s;
+            coolColor.b = config.scheme.cool.b;
+
+            params.seed = config.seed;
+            params.noiseScale = config.noiseScale;
+            params.attractorCount = config.attractorCount;
+            params.colorDrift = config.colorDrift;
+
+            // Update UI
+            updateSeedDisplay();
+            updateSliderUI('noiseScale', config.noiseScale.toFixed(3));
+            updateSliderUI('attractorCount', config.attractorCount);
+            updateSliderUI('colorDrift', config.colorDrift);
+        }
+
+        function updateSliderUI(param, value) {
+            const slider = document.getElementById(param);
+            const mobileSlider = document.getElementById('mobile-' + param);
+            const valSpan = document.getElementById(param + '-val');
+            const mobileValSpan = document.getElementById('mobile-' + param + '-val');
+
+            if (slider) slider.value = value;
+            if (mobileSlider) mobileSlider.value = value;
+            if (valSpan) valSpan.textContent = value;
+            if (mobileValSpan) mobileValSpan.textContent = value;
+        }
+
+        // ═══════════════════════════════════════════════════════════════════════
+        // AUDIO ANALYSIS
         // ═══════════════════════════════════════════════════════════════════════
 
         let audioContext, analyser, microphone, dataArray;
         let audioEnabled = false;
-        let audioLevel = 0;
-        let bassLevel = 0;
-        let midLevel = 0;
-        let highLevel = 0;
-        let beatDetected = false;
-        let lastBeatTime = 0;
-        let beatThreshold = 0.6;
-        let smoothedLevel = 0;
+        let audioLevel = 0, bassLevel = 0, midLevel = 0, highLevel = 0;
+        let beatDetected = false, lastBeatTime = 0, beatThreshold = 0.6, smoothedLevel = 0;
 
         async function toggleAudio() {
             const btn = document.getElementById('audio-btn');
+            const mobileBtn = document.getElementById('mobile-audio-btn');
             const status = document.getElementById('audio-status');
 
             if (!audioEnabled) {
@@ -260,12 +1089,14 @@
 
                     btn.textContent = 'DISABLE MICROPHONE';
                     btn.classList.add('active');
+                    mobileBtn.classList.add('active');
+                    mobileBtn.textContent = '🎙️';
                     status.textContent = 'ON';
                     status.style.color = '#22c55e';
 
                     analyzeAudio();
                 } catch (e) {
-                    alert('Microphone access denied. Please allow microphone access to enable audio reactivity.');
+                    alert('Microphone access denied. Please allow microphone access.');
                 }
             } else {
                 audioEnabled = false;
@@ -274,130 +1105,100 @@
 
                 btn.textContent = 'ENABLE MICROPHONE';
                 btn.classList.remove('active');
+                mobileBtn.classList.remove('active');
+                mobileBtn.textContent = '🎤';
                 status.textContent = 'OFF';
                 status.style.color = '';
                 audioLevel = 0;
+                document.getElementById('audio-bar').style.width = '0%';
             }
         }
 
         function analyzeAudio() {
             if (!audioEnabled) return;
-
             analyser.getByteFrequencyData(dataArray);
-
-            // Calculate frequency bands
             const bufferLength = dataArray.length;
             let bassSum = 0, midSum = 0, highSum = 0;
-
-            // Bass: 0-10 (roughly 0-300Hz)
             for (let i = 0; i < 10; i++) bassSum += dataArray[i];
             bassLevel = bassSum / (10 * 255);
-
-            // Mids: 10-50 (roughly 300Hz-1.5kHz)
             for (let i = 10; i < 50; i++) midSum += dataArray[i];
             midLevel = midSum / (40 * 255);
-
-            // Highs: 50-128 (roughly 1.5kHz+)
             for (let i = 50; i < bufferLength; i++) highSum += dataArray[i];
             highLevel = highSum / ((bufferLength - 50) * 255);
-
-            // Overall level
             const sum = dataArray.reduce((a, b) => a + b, 0);
             audioLevel = sum / (bufferLength * 255);
-
-            // Smooth the level
             smoothedLevel = smoothedLevel * 0.9 + audioLevel * 0.1;
-
-            // Beat detection (based on bass)
             if (bassLevel > beatThreshold && Date.now() - lastBeatTime > 200) {
                 beatDetected = true;
                 lastBeatTime = Date.now();
             } else {
                 beatDetected = false;
             }
-
-            // Update UI
             document.getElementById('audio-bar').style.width = (audioLevel * 100) + '%';
-
             requestAnimationFrame(analyzeAudio);
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // COLOR SPLASHES - Permanent color marks on canvas
+        // COLOR SPLASHES
         // ═══════════════════════════════════════════════════════════════════════
 
         let colorSplashes = [];
 
         class ColorSplash {
             constructor(x, y, hue) {
-                this.x = x;
-                this.y = y;
-                this.hue = hue;
+                this.x = x; this.y = y; this.hue = hue;
                 this.radius = random(30, 80);
                 this.maxRadius = this.radius;
                 this.alpha = 40;
                 this.growing = true;
                 this.growSpeed = random(2, 5);
             }
-
             update() {
                 if (this.growing && this.radius < this.maxRadius * 1.5) {
                     this.radius += this.growSpeed;
-                } else {
-                    this.growing = false;
-                }
-                // Slowly fade
+                } else { this.growing = false; }
                 this.alpha *= 0.998;
             }
-
             draw() {
                 if (this.alpha < 1) return;
-                push();
-                noStroke();
-                // Multiple layers for watercolor effect
+                push(); noStroke();
                 for (let i = 3; i > 0; i--) {
                     fill(this.hue, 80, 90, this.alpha * (i / 3) * 0.3);
                     circle(this.x + random(-5, 5), this.y + random(-5, 5), this.radius * (i / 3));
                 }
                 pop();
             }
-
-            isDead() {
-                return this.alpha < 1;
-            }
+            isDead() { return this.alpha < 1; }
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // LOCATION & TIME
+        // LOCATION & TIME (HTTPS for security)
         // ═══════════════════════════════════════════════════════════════════════
 
         let userCountry = { code: 'XX', name: 'Unknown', flag: '🌍', colors: ['#e85d04', '#4cc9f0'] };
 
         const countryData = {
-            'MX': { name: 'México', flag: '🇲🇽', colors: ['#006847', '#CE1126'] },
-            'US': { name: 'United States', flag: '🇺🇸', colors: ['#3C3B6E', '#B22234'] },
-            'ES': { name: 'España', flag: '🇪🇸', colors: ['#AA151B', '#F1BF00'] },
-            'AR': { name: 'Argentina', flag: '🇦🇷', colors: ['#74ACDF', '#F6B40E'] },
-            'BR': { name: 'Brasil', flag: '🇧🇷', colors: ['#009739', '#FEDD00'] },
-            'CO': { name: 'Colombia', flag: '🇨🇴', colors: ['#FCD116', '#003893'] },
-            'JP': { name: '日本', flag: '🇯🇵', colors: ['#BC002D', '#FFFFFF'] },
-            'GB': { name: 'United Kingdom', flag: '🇬🇧', colors: ['#012169', '#C8102E'] },
-            'DE': { name: 'Deutschland', flag: '🇩🇪', colors: ['#000000', '#DD0000'] },
-            'FR': { name: 'France', flag: '🇫🇷', colors: ['#002395', '#ED2939'] },
+            'MX': { name: 'México', flag: '🇲🇽' }, 'US': { name: 'United States', flag: '🇺🇸' },
+            'ES': { name: 'España', flag: '🇪🇸' }, 'AR': { name: 'Argentina', flag: '🇦🇷' },
+            'BR': { name: 'Brasil', flag: '🇧🇷' }, 'CO': { name: 'Colombia', flag: '🇨🇴' },
+            'JP': { name: '日本', flag: '🇯🇵' }, 'GB': { name: 'United Kingdom', flag: '🇬🇧' },
+            'DE': { name: 'Deutschland', flag: '🇩🇪' }, 'FR': { name: 'France', flag: '🇫🇷' },
+            'CA': { name: 'Canada', flag: '🇨🇦' }, 'AU': { name: 'Australia', flag: '🇦🇺' },
         };
 
         async function detectLocation() {
             try {
-                const response = await fetch('http://ip-api.com/json/?fields=status,country,countryCode,city');
+                // Using HTTPS API for security
+                const response = await fetch('https://ipapi.co/json/');
                 const data = await response.json();
-                if (data.status === 'success') {
-                    const code = data.countryCode || 'XX';
+                if (data.country_code) {
+                    const code = data.country_code;
                     const cityName = data.city || '';
                     if (countryData[code]) {
                         userCountry = { code, ...countryData[code] };
                         if (cityName) userCountry.name = `${cityName}, ${countryData[code].name}`;
                     } else {
-                        userCountry = { code, name: data.country || 'Unknown', flag: '🌍', colors: ['#e85d04', '#4cc9f0'] };
+                        userCountry = { code, name: data.country_name || 'Unknown', flag: '🌍' };
                     }
                     document.getElementById('country-flag').textContent = userCountry.flag;
                     document.getElementById('country-name').textContent = userCountry.name;
@@ -411,7 +1212,6 @@
             const now = new Date();
             document.getElementById('current-time').textContent = now.toLocaleTimeString('en-US', { hour12: false });
         }
-
         setInterval(updateTime, 1000);
         updateTime();
         detectLocation();
@@ -422,23 +1222,19 @@
 
         let params = {
             seed: 42,
-            particleCount: 2000,
+            particleCount: 1500,
             attractorCount: 4,
             forceStrength: 2.0,
             pulseSpeed: 0.015,
             trailOpacity: 8,
-            noiseInfluence: 0.5
+            noiseScale: 0.003,
+            colorDrift: 0
         };
 
-        let defaultParams = {...params};
-        let particles = [];
-        let attractors = [];
-        let letterParticles = [];
-        let time = 0;
-        let globalHueShift = 0;
-
-        const warmColor = { h: 25, s: 95, b: 90 };
-        const coolColor = { h: 195, s: 70, b: 95 };
+        let particles = [], attractors = [], letterParticles = [];
+        let time = 0, globalHueShift = 0;
+        let warmColor = { h: 25, s: 95, b: 90 };
+        let coolColor = { h: 195, s: 70, b: 95 };
 
         function setup() {
             let container = document.getElementById('canvas-container');
@@ -446,7 +1242,13 @@
             canvas.parent('canvas-container');
             colorMode(HSB, 360, 100, 100, 100);
             textFont('Space Mono');
+
+            // Apply random session config
+            const sessionConfig = generateSessionConfig();
+            applySessionConfig(sessionConfig);
+
             initializeSystem();
+            startTypewriter();
         }
 
         function windowResized() {
@@ -483,12 +1285,12 @@
         }
 
         function draw() {
-            // Audio-reactive trail opacity
             let dynamicTrailOpacity = params.trailOpacity;
             if (audioEnabled) {
                 dynamicTrailOpacity = params.trailOpacity * (1 - bassLevel * 0.7);
-                // Shift global hue based on mid frequencies
-                globalHueShift = midLevel * 60;
+                globalHueShift = midLevel * 60 + params.colorDrift;
+            } else {
+                globalHueShift = params.colorDrift;
             }
 
             push();
@@ -498,27 +1300,19 @@
             rect(0, 0, width, height);
             pop();
 
-            // Audio-reactive time speed
             let timeSpeed = params.pulseSpeed;
-            if (audioEnabled) {
-                timeSpeed = params.pulseSpeed * (1 + audioLevel * 3);
-            }
+            if (audioEnabled) timeSpeed = params.pulseSpeed * (1 + audioLevel * 3);
             time += timeSpeed;
 
-            // Draw color splashes first (behind particles)
             for (let i = colorSplashes.length - 1; i >= 0; i--) {
                 colorSplashes[i].update();
                 colorSplashes[i].draw();
-                if (colorSplashes[i].isDead()) {
-                    colorSplashes.splice(i, 1);
-                }
+                if (colorSplashes[i].isDead()) colorSplashes.splice(i, 1);
             }
 
-            // Audio-reactive force multiplier
             let forceMultiplier = 1;
             if (audioEnabled) {
                 forceMultiplier = 1 + bassLevel * 2;
-                // Beat flash
                 if (beatDetected) {
                     push();
                     fill(globalHueShift + 30, 80, 100, 5);
@@ -533,13 +1327,10 @@
                 if (p.isDead()) p.respawn();
             }
 
-            // Letter particles
             for (let i = letterParticles.length - 1; i >= 0; i--) {
                 letterParticles[i].update(forceMultiplier);
                 letterParticles[i].draw();
-                if (letterParticles[i].isDead()) {
-                    letterParticles.splice(i, 1);
-                }
+                if (letterParticles[i].isDead()) letterParticles.splice(i, 1);
             }
         }
 
@@ -548,12 +1339,7 @@
         // ═══════════════════════════════════════════════════════════════════════
 
         class Particle {
-            constructor() {
-                this.respawn();
-                this.history = [];
-                this.maxHistory = 5;
-            }
-
+            constructor() { this.respawn(); this.history = []; this.maxHistory = 5; }
             respawn() {
                 let edge = floor(random(4));
                 switch(edge) {
@@ -569,7 +1355,6 @@
                 this.life = 255;
                 this.history = [];
             }
-
             update(forceMultiplier = 1) {
                 if (frameCount % 2 === 0) {
                     this.history.push(this.pos.copy());
@@ -585,23 +1370,20 @@
                     force.normalize().mult(forceMag);
                     this.acc.add(force);
                 }
-                let noiseAngle = noise(this.pos.x * 0.003, this.pos.y * 0.003, time * 0.5) * TWO_PI * 4;
-                let noiseForce = createVector(cos(noiseAngle), sin(noiseAngle)).mult(params.noiseInfluence);
+                let noiseAngle = noise(this.pos.x * params.noiseScale, this.pos.y * params.noiseScale, time * 0.5) * TWO_PI * 4;
+                let noiseForce = createVector(cos(noiseAngle), sin(noiseAngle)).mult(0.5);
                 this.acc.add(noiseForce);
                 this.vel.add(this.acc).limit(8);
                 this.pos.add(this.vel);
                 this.life -= 0.3;
             }
-
             draw() {
                 let speed = this.vel.mag();
                 let speedNorm = constrain(map(speed, 0, 6, 0, 1), 0, 1);
                 let h = lerp(coolColor.h, warmColor.h, speedNorm) + globalHueShift;
                 let s = lerp(coolColor.s, warmColor.s, speedNorm);
                 let b = lerp(coolColor.b, warmColor.b, speedNorm);
-
-                noFill();
-                beginShape();
+                noFill(); beginShape();
                 for (let i = 0; i < this.history.length; i++) {
                     let alpha = map(i, 0, this.history.length, 10, 40);
                     stroke(h % 360, s, b, alpha);
@@ -614,7 +1396,6 @@
                 fill(h % 360, s, b, 60);
                 circle(this.pos.x, this.pos.y, map(speed, 0, 6, 1.5, 4));
             }
-
             isDead() {
                 return this.pos.x < -50 || this.pos.x > width + 50 ||
                        this.pos.y < -50 || this.pos.y > height + 50 ||
@@ -623,7 +1404,7 @@
         }
 
         // ═══════════════════════════════════════════════════════════════════════
-        // GELATINOUS LETTER PARTICLE WITH COLOR SPLASH
+        // LETTER PARTICLE
         // ═══════════════════════════════════════════════════════════════════════
 
         class LetterParticle {
@@ -637,30 +1418,21 @@
                 this.size = this.baseSize;
                 this.rotation = 0;
                 this.rotationSpeed = random(-0.03, 0.03);
-                this.hue = random(360); // Random color for splash
+                this.hue = random(360);
                 this.falling = true;
                 this.fallFrames = random(50, 100);
                 this.hasSplashed = false;
-
-                // Gelatinous properties
                 this.pulsePhase = random(TWO_PI);
                 this.pulseSpeed = random(0.08, 0.15);
                 this.pulseAmount = random(0.3, 0.5);
-                this.squashX = 1;
-                this.squashY = 1;
-                this.targetSquashX = 1;
-                this.targetSquashY = 1;
+                this.squashX = 1; this.squashY = 1;
+                this.targetSquashX = 1; this.targetSquashY = 1;
             }
-
             update(forceMultiplier = 1) {
                 this.acc.mult(0);
-
-                // Gelatinous pulse
                 this.pulsePhase += this.pulseSpeed;
                 let pulse = sin(this.pulsePhase);
                 this.size = this.baseSize * (1 + pulse * this.pulseAmount);
-
-                // Squash effect
                 this.squashX += (this.targetSquashX - this.squashX) * 0.15;
                 this.squashY += (this.targetSquashY - this.squashY) * 0.15;
                 this.squashX += sin(this.pulsePhase * 1.5) * 0.1;
@@ -669,14 +1441,10 @@
                 if (this.falling) {
                     this.acc.add(createVector(sin(frameCount * 0.08 + this.pos.x * 0.02) * 0.15, 0.2));
                     this.fallFrames--;
-
                     if (this.fallFrames <= 0 || this.pos.y > height * 0.25) {
                         this.falling = false;
-
-                        // CREATE COLOR SPLASH when landing!
                         if (!this.hasSplashed) {
                             this.hasSplashed = true;
-                            // Multiple splashes for watercolor effect
                             for (let i = 0; i < 3; i++) {
                                 colorSplashes.push(new ColorSplash(
                                     this.pos.x + random(-20, 20),
@@ -685,9 +1453,7 @@
                                 ));
                             }
                         }
-
-                        this.targetSquashX = 1.4;
-                        this.targetSquashY = 0.6;
+                        this.targetSquashX = 1.4; this.targetSquashY = 0.6;
                         setTimeout(() => { this.targetSquashX = 0.8; this.targetSquashY = 1.3; }, 100);
                         setTimeout(() => { this.targetSquashX = 1; this.targetSquashY = 1; }, 200);
                     }
@@ -701,60 +1467,43 @@
                         force.normalize().mult(forceMag);
                         this.acc.add(force);
                     }
-                    let noiseAngle = noise(this.pos.x * 0.003, this.pos.y * 0.003, time * 0.5) * TWO_PI * 4;
-                    let noiseForce = createVector(cos(noiseAngle), sin(noiseAngle)).mult(params.noiseInfluence * 0.7);
+                    let noiseAngle = noise(this.pos.x * params.noiseScale, this.pos.y * params.noiseScale, time * 0.5) * TWO_PI * 4;
+                    let noiseForce = createVector(cos(noiseAngle), sin(noiseAngle)).mult(0.35);
                     this.acc.add(noiseForce);
-
-                    // Occasionally splash more color while moving
                     if (random() < 0.01) {
                         colorSplashes.push(new ColorSplash(this.pos.x, this.pos.y, this.hue + random(-30, 30)));
                     }
                 }
-
                 this.vel.add(this.acc).limit(this.falling ? 6 : 3.5);
                 this.pos.add(this.vel);
                 this.rotation += this.rotationSpeed;
                 this.life -= 0.4;
                 if (!this.falling) this.rotationSpeed *= 0.97;
             }
-
             draw() {
                 let alpha = map(this.life, 0, 1200, 0, 100);
-
                 push();
                 translate(this.pos.x, this.pos.y);
                 rotate(this.rotation);
                 scale(this.squashX, this.squashY);
-
                 noStroke();
-                // Outer glow with letter's color
                 fill(this.hue, 80, 100, alpha * 0.15);
-                textSize(this.size + 20);
-                textAlign(CENTER, CENTER);
+                textSize(this.size + 20); textAlign(CENTER, CENTER);
                 text(this.letter, 0, 0);
-
-                // Middle glow
                 fill(this.hue, 85, 100, alpha * 0.3);
                 textSize(this.size + 10);
                 text(this.letter, 0, 0);
-
-                // Main letter
                 fill(this.hue, 90, 100, alpha);
                 textSize(this.size);
                 text(this.letter, 0, 0);
-
-                // Bright core
                 fill(this.hue, 30, 100, alpha * 0.7);
                 textSize(this.size - 6);
                 text(this.letter, 0, 0);
-
                 pop();
             }
-
             isDead() {
                 return this.pos.x < -150 || this.pos.x > width + 150 ||
-                       this.pos.y < -150 || this.pos.y > height + 150 ||
-                       this.life < 0;
+                       this.pos.y < -150 || this.pos.y > height + 150 || this.life < 0;
             }
         }
 
@@ -766,10 +1515,8 @@
             let input = document.getElementById('message-input');
             let message = input.value.trim().toUpperCase();
             if (message.length === 0) return;
-
             let totalWidth = message.length * 35;
             let startX = (width - totalWidth) / 2;
-
             for (let i = 0; i < message.length; i++) {
                 let char = message[i];
                 if (char !== ' ') {
@@ -783,9 +1530,31 @@
             input.focus();
         }
 
+        function dropMessageMobile() {
+            let input = document.getElementById('mobile-message-input');
+            let message = input.value.trim().toUpperCase();
+            if (message.length === 0) return;
+            let totalWidth = message.length * 35;
+            let startX = (width - totalWidth) / 2;
+            for (let i = 0; i < message.length; i++) {
+                let char = message[i];
+                if (char !== ' ') {
+                    setTimeout(() => {
+                        let x = startX + i * 35 + random(-15, 15);
+                        letterParticles.push(new LetterParticle(char, x));
+                    }, i * 100);
+                }
+            }
+            input.value = '';
+            input.blur();
+        }
+
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('message-input').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') dropMessage();
+            });
+            document.getElementById('mobile-message-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') dropMessageMobile();
             });
         });
 
@@ -795,12 +1564,21 @@
 
         function updateParam(paramName, value) {
             params[paramName] = parseFloat(value);
-            document.getElementById(paramName + '-val').textContent = value;
+            updateSliderUI(paramName, value);
+        }
+
+        function updateAttractorCount(value) {
+            params.attractorCount = parseInt(value);
+            updateSliderUI('attractorCount', value);
+            initializeSystem();
         }
 
         function updateSeedDisplay() {
-            document.getElementById('seed-display').textContent = String(params.seed).padStart(6, '0');
+            const seedStr = String(params.seed).padStart(6, '0');
+            document.getElementById('seed-display').textContent = seedStr;
             document.getElementById('seed-input').value = params.seed;
+            const mobileSeed = document.getElementById('mobile-seed-display');
+            if (mobileSeed) mobileSeed.textContent = seedStr;
         }
 
         function updateSeed() {
@@ -815,6 +1593,24 @@
         function previousSeed() { params.seed = Math.max(1, params.seed - 1); updateSeedDisplay(); initializeSystem(); }
         function nextSeed() { params.seed++; updateSeedDisplay(); initializeSystem(); }
         function randomSeedAndUpdate() { params.seed = Math.floor(Math.random() * 999999) + 1; updateSeedDisplay(); initializeSystem(); }
+
+        // Mobile UI
+        function openBottomSheet() {
+            document.getElementById('bottom-sheet').classList.add('open');
+            document.getElementById('sheet-overlay').classList.add('open');
+        }
+        function closeBottomSheet() {
+            document.getElementById('bottom-sheet').classList.remove('open');
+            document.getElementById('sheet-overlay').classList.remove('open');
+        }
+
+        // Modal
+        function showAboutModal() {
+            document.getElementById('about-modal').classList.add('open');
+        }
+        function closeAboutModal() {
+            document.getElementById('about-modal').classList.remove('open');
+        }
 
         window.addEventListener('load', updateSeedDisplay);
     </script>
