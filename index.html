@@ -529,7 +529,7 @@
             max-height: 70vh;
             overflow-y: auto;
         }
-        .bottom-sheet.open { transform: translateY(0); }
+        .bottom-sheet.open { display: block; transform: translateY(0); }
         .bottom-sheet-handle {
             width: 40px;
             height: 4px;
@@ -547,7 +547,7 @@
             opacity: 0;
             transition: opacity 0.3s ease;
         }
-        .sheet-overlay.open { opacity: 1; }
+        .sheet-overlay.open { display: block; opacity: 1; }
 
         /* Mobile Message Input */
         .mobile-message-bar {
@@ -702,14 +702,22 @@
             }
             .nav-links { display: none; }
             .art-section {
-                padding: 8px;
+                padding: 0;
+                height: 100%;
+                position: fixed;
+                top: 44px;
+                left: 0;
+                right: 0;
+                bottom: 60px;
+            }
+            #canvas-container {
+                border: none;
+                border-radius: 0;
                 height: 100%;
             }
             .sidebar { display: none; }
             .mobile-fab { display: flex; }
             .mobile-message-bar { display: flex; }
-            .bottom-sheet { display: block; }
-            .sheet-overlay { display: block; }
 
             /* Touch targets ≥ 44px per mobile-design skill */
             .bottom-sheet .btn {
@@ -752,8 +760,9 @@
         @media (max-width: 480px) {
             .header { padding: 8px 12px; }
             .title-jp { font-size: 16px; }
-            .mobile-fab { bottom: 90px; right: 16px; }
-            .fab-btn { width: 50px; height: 50px; font-size: 20px; }
+            .mobile-fab { bottom: 72px; right: 16px; }
+            .fab-btn { width: 48px; height: 48px; font-size: 20px; }
+            .mobile-message-bar { padding: 10px 12px; padding-bottom: max(10px, env(safe-area-inset-bottom)); }
         }
 
         /* Safe area support */
