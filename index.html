@@ -38,7 +38,7 @@
             width: 100%; height: 100%;
             background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
             pointer-events: none;
-            z-index: 1000;
+            z-index: -1;
         }
 
         /* ═══════════════════════════════════════════════════════════════════════ */
@@ -52,7 +52,7 @@
             align-items: center;
             gap: 15px;
             position: relative;
-            z-index: 100;
+            z-index: 1;
         }
         .header-left { display: flex; align-items: center; gap: 12px; }
         .title-jp {
@@ -476,7 +476,7 @@
             position: fixed;
             bottom: 20px;
             right: 20px;
-            z-index: 500;
+            z-index: 1010;
             gap: 12px;
             flex-direction: column;
             align-items: flex-end;
@@ -523,7 +523,7 @@
             background: var(--bg-secondary);
             border-top: 1px solid var(--gray);
             border-radius: 20px 20px 0 0;
-            z-index: 600;
+            z-index: 1020;
             transform: translateY(100%);
             transition: transform 0.3s ease;
             max-height: 70vh;
@@ -543,7 +543,7 @@
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.6);
-            z-index: 550;
+            z-index: 1015;
             opacity: 0;
             transition: opacity 0.3s ease;
         }
@@ -560,7 +560,7 @@
             border-top: 1px solid var(--gray);
             padding: 12px 16px;
             padding-bottom: max(12px, env(safe-area-inset-bottom));
-            z-index: 400;
+            z-index: 1005;
             gap: 10px;
         }
         .mobile-message-input {
@@ -600,7 +600,7 @@
             position: fixed;
             inset: 0;
             background: rgba(0,0,0,0.8);
-            z-index: 900;
+            z-index: 1030;
             display: none;
             align-items: center;
             justify-content: center;
@@ -710,6 +710,43 @@
             .mobile-message-bar { display: flex; }
             .bottom-sheet { display: block; }
             .sheet-overlay { display: block; }
+
+            /* Touch targets ≥ 44px per mobile-design skill */
+            .bottom-sheet .btn {
+                padding: 14px 10px;
+                font-size: 11px;
+                min-height: 44px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .bottom-sheet .btn.primary {
+                min-height: 48px;
+                padding: 16px 10px;
+            }
+            .bottom-sheet .control-item label {
+                font-size: 10px;
+                margin-bottom: 10px;
+            }
+            .bottom-sheet .slider {
+                height: 6px;
+                padding: 10px 0;
+                -webkit-appearance: none;
+                appearance: none;
+                background: transparent;
+                background-image: linear-gradient(var(--gray), var(--gray));
+                background-size: 100% 6px;
+                background-repeat: no-repeat;
+                background-position: center;
+            }
+            .bottom-sheet .slider::-webkit-slider-thumb {
+                width: 28px;
+                height: 28px;
+            }
+            .bottom-sheet .sidebar-section {
+                padding-bottom: 16px;
+                margin-bottom: 4px;
+            }
         }
 
         @media (max-width: 480px) {
