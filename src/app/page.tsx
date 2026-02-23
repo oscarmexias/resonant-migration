@@ -10,6 +10,7 @@ import SignalLoader from '@/components/SignalLoader'
 import Receipt from '@/components/Receipt'
 import AwakeningSequence from '@/components/AwakeningSequence'
 import CitySearch from '@/components/CitySearch'
+import LandscapeHint from '@/components/LandscapeHint'
 
 // Three.js requires browser — no SSR
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
@@ -209,6 +210,9 @@ export default function Home() {
 
       {/* City search — available while art is visible */}
       {phase === 'output' && <CitySearch />}
+
+      {/* Landscape nudge — portrait mobile only */}
+      {phase === 'output' && <LandscapeHint />}
 
       {phase === 'error' && (
         <div

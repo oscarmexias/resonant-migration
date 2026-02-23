@@ -109,15 +109,28 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: 0.05em; }
   mix-blend-mode: overlay;
 }
 
-/* Mobile: pixel grid always fits 100dvh — no more scrollable canvas */
-@media (max-width: 767px) {
+/* Mobile portrait: shift canvas up so receipt handle (+ drag pill) doesn't cover art center */
+@media (max-width: 767px) and (orientation: portrait) {
+  .art-canvas-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 64px;          /* pill(8) + handle(48) + safe area ≈ 64px */
+    height: auto;
+  }
+}
+
+/* Mobile landscape: canvas fills fully, receipt sits on top as overlay */
+@media (max-width: 900px) and (orientation: landscape) {
   .art-canvas-container {
     position: fixed;
     inset: 0;
     height: 100dvh;
   }
-  .art-canvas-container::after {
-    position: fixed;
+  /* Compact receipt in landscape — never expand beyond half screen */
+  .receipt-panel.expanded {
+    max-height: 55vh;
   }
 }
 
@@ -358,4 +371,27 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: 0.05em; }
   background: rgba(212, 129, 31, 0.12);
   color: var(--eye-core);
   border-color: rgba(212, 129, 31, 0.25);
+}
+
+/* ── Prevent iOS auto-zoom on input focus (triggered by font-size < 16px) ──── */
+@media (max-width: 767px) {
+  input {
+    font-size: 16px !important;
+  }
+}
+
+/* ── Landscape hint animations ──────────────────────────────────────────────── */
+@keyframes fadeInOut {
+  0%   { opacity: 0; transform: translate(-50%, -48%); }
+  12%  { opacity: 1; transform: translate(-50%, -50%); }
+  80%  { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -50%); }
+}
+
+@keyframes rotateHint {
+  0%   { transform: rotate(0deg); }
+  30%  { transform: rotate(-90deg); }
+  60%  { transform: rotate(-90deg); }
+  90%  { transform: rotate(0deg); }
+  100% { transform: rotate(0deg); }
 }

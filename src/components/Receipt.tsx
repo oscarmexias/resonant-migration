@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { WorldState } from '@/types/worldstate'
 import { buildShareUrl } from '@/lib/worldstate'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { useWorldStateStore } from '@/store/worldState'
 
 interface ReceiptProps {
   worldState: WorldState
@@ -313,9 +314,52 @@ function DecoderTable({ primaryHue }: { primaryHue: number }) {
 // ─── Main Receipt ─────────────────────────────────────────────────────────────
 export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
   const isMobile = useIsMobile()
+  const setControlPanelOpen = useWorldStateStore((s) => s.setControlPanelOpen)
+  const mosaicMode          = useWorldStateStore((s) => s.mosaicMode)
+  const setMosaicMode       = useWorldStateStore((s) => s.setMosaicMode)
+  const setCitySearchOpen   = useWorldStateStore((s) => s.setCitySearchOpen)
+  const monumentModeOn      = useWorldStateStore((s) => s.monumentModeOn)
+  const setMonumentModeOn   = useWorldStateStore((s) => s.setMonumentModeOn)
   // Default collapsed on mobile so art is visible; expanded on desktop
   const [collapsed, setCollapsed] = useState(true)
   const [showDecoder, setShowDecoder] = useState(false)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const touchStartY = useRef<number | null>(null)
+
+  const toggleCollapsed = useCallback((next: boolean) => {
+    setCollapsed(next)
+    setControlPanelOpen(!next)
+  }, [setControlPanelOpen])
+
+  const toggleFullscreen = useCallback(async () => {
+    const doc = document as any; const el = document.documentElement as any
+    const inFS = !!document.fullscreenElement || !!doc.webkitFullscreenElement
+    await (inFS
+      ? (document.exitFullscreen ?? doc.webkitExitFullscreen)?.call(document)
+      : (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el)
+    )?.catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    const onChange = () =>
+      setIsFullscreen(!!(document.fullscreenElement || (document as any).webkitFullscreenElement))
+    document.addEventListener('fullscreenchange', onChange)
+    document.addEventListener('webkitfullscreenchange', onChange)
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange)
+      document.removeEventListener('webkitfullscreenchange', onChange)
+    }
+  }, [])
+
+  const iconBtnStyle: React.CSSProperties = {
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+    width: '28px', height: '28px',
+    borderRadius: '3px',
+    color: 'rgba(255,255,255,0.45)',
+    cursor: 'pointer', flexShrink: 0,
+    WebkitTapHighlightColor: 'transparent',
+    touchAction: 'manipulation',
+  }
 
   const { clima, cosmos, economia, tierra, atencion, location, generatedAt, seed } = worldState
   const primaryHue = getPrimaryHue(worldState)
@@ -448,13 +492,28 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
       className={`receipt-panel slot-emerge ${collapsed ? 'collapsed' : 'expanded'}`}
       style={{ borderTop: `1px solid hsl(${primaryHue},35%,22%)`, transition: 'border-color 0.8s ease, max-height 0.4s cubic-bezier(0.4,0,0.2,1)' }}
     >
+      {/* ── Drag pill (mobile only) ── */}
+      {isMobile && (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '6px 0 2px' }}>
+          <div style={{ width: '32px', height: '3px', borderRadius: '2px', background: 'rgba(255,255,255,0.15)' }} />
+        </div>
+      )}
+
       {/* ── Handle strip: always visible, toggles panel ── */}
       <button
         className="receipt-handle"
-        onClick={() => setCollapsed((v) => !v)}
+        onClick={() => toggleCollapsed(!collapsed)}
         aria-expanded={!collapsed}
         aria-label={collapsed ? 'Expandir panel de señales' : 'Colapsar panel de señales'}
         style={{ borderBottom: collapsed ? 'none' : `1px solid hsl(${primaryHue},15%,16%)` }}
+        onTouchStart={(e) => { touchStartY.current = e.touches[0].clientY }}
+        onTouchEnd={(e) => {
+          if (touchStartY.current === null) return
+          const delta = touchStartY.current - e.changedTouches[0].clientY
+          if (delta > 40)  toggleCollapsed(false)
+          if (delta < -40) toggleCollapsed(true)
+          touchStartY.current = null
+        }}
       >
         {/* Left: edition + city + key stats */}
         <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', minWidth: 0 }}>
@@ -489,9 +548,87 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
           )}
         </span>
 
-        {/* Right: label + chevron */}
-        <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', color: 'var(--text-dim)', fontSize: '8px', letterSpacing: '0.15em' }}>
-          {collapsed ? 'VER SEÑALES' : 'OCULTAR'}
+        {/* Right: icon buttons (mobile) + chevron */}
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {isMobile && (
+            <>
+              {/* SIGLAS / NOMBRE toggle — hidden in monument mode */}
+              {!monumentModeOn && (
+                <span
+                  role="button"
+                  tabIndex={0}
+                  onClick={(e) => { e.stopPropagation(); setMosaicMode(mosaicMode === 'code' ? 'name' : 'code') }}
+                  onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), setMosaicMode(mosaicMode === 'code' ? 'name' : 'code'))}
+                  aria-label={mosaicMode === 'code' ? 'Mostrar nombre' : 'Mostrar siglas'}
+                  style={iconBtnStyle}
+                >
+                  <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: 0, lineHeight: 1 }}>
+                    {mosaicMode === 'code' ? 'AB' : '···'}
+                  </span>
+                </span>
+              )}
+              {/* FULLSCREEN */}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
+                onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), toggleFullscreen())}
+                aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                style={iconBtnStyle}
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  {isFullscreen ? (
+                    <>
+                      <path d="M5 2 L3 2 L3 4"   stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M9 2 L11 2 L11 4"  stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M5 12 L3 12 L3 10" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M9 12 L11 12 L11 10" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </>
+                  ) : (
+                    <>
+                      <path d="M3 5 L3 3 L5 3"   stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M11 5 L11 3 L9 3"  stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3 9 L3 11 L5 11"  stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M11 9 L11 11 L9 11" stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
+                    </>
+                  )}
+                </svg>
+              </span>
+              {/* MONUMENT / LETRAS mode toggle */}
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={(e) => { e.stopPropagation(); setMonumentModeOn(!monumentModeOn) }}
+                onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), setMonumentModeOn(!monumentModeOn))}
+                aria-label={monumentModeOn ? 'Modo letras' : 'Modo monumento'}
+                style={{
+                  ...iconBtnStyle,
+                  color: monumentModeOn ? 'rgba(212,129,31,0.85)' : 'rgba(255,255,255,0.45)',
+                }}
+              >
+                {monumentModeOn ? (
+                  /* grid icon → click to return to letter mode */
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <rect x="1.5" y="1.5" width="4.5" height="4.5" stroke="currentColor" strokeWidth="1"/>
+                    <rect x="8" y="1.5" width="4.5" height="4.5" stroke="currentColor" strokeWidth="1"/>
+                    <rect x="1.5" y="8" width="4.5" height="4.5" stroke="currentColor" strokeWidth="1"/>
+                    <rect x="8" y="8" width="4.5" height="4.5" stroke="currentColor" strokeWidth="1"/>
+                  </svg>
+                ) : (
+                  /* arch/monument icon → click to enter monument mode */
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                    <path d="M2 12.5 L2 7.5 Q2 2.5 7 2.5 Q12 2.5 12 7.5 L12 12.5" stroke="currentColor" strokeWidth="1" strokeLinecap="round"/>
+                    <line x1="0.5" y1="12.5" x2="13.5" y2="12.5" stroke="currentColor" strokeWidth="1"/>
+                    <line x1="4.5" y1="12.5" x2="4.5" y2="8.5" stroke="currentColor" strokeWidth="0.8"/>
+                    <line x1="9.5" y1="12.5" x2="9.5" y2="8.5" stroke="currentColor" strokeWidth="0.8"/>
+                  </svg>
+                )}
+              </span>
+            </>
+          )}
+          <span style={{ color: 'var(--text-dim)', fontSize: '8px', letterSpacing: '0.15em' }}>
+            {collapsed ? (isMobile ? '' : 'VER SEÑALES') : (isMobile ? '' : 'OCULTAR')}
+          </span>
           <span
             style={{
               display: 'inline-block',
@@ -517,7 +654,7 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, 1fr)',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
             gap: 'var(--sp-2)',
             marginBottom: 'var(--sp-3)',
           }}

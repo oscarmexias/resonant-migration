@@ -28,6 +28,15 @@ interface WorldStateStore {
   mosaicMode: 'code' | 'name'
   setMosaicMode: (mode: 'code' | 'name') => void
 
+  controlPanelOpen: boolean
+  setControlPanelOpen: (v: boolean) => void
+
+  citySearchOpen: boolean
+  setCitySearchOpen: (v: boolean) => void
+
+  monumentModeOn: boolean
+  setMonumentModeOn: (v: boolean) => void
+
   reset: () => void
 }
 
@@ -67,6 +76,15 @@ export const useWorldStateStore = create<WorldStateStore>((set) => ({
 
   mosaicMode: 'code',
   setMosaicMode: (mosaicMode) => set({ mosaicMode }),
+
+  controlPanelOpen: false,
+  setControlPanelOpen: (controlPanelOpen) => set({ controlPanelOpen }),
+
+  citySearchOpen: false,
+  setCitySearchOpen: (citySearchOpen) => set({ citySearchOpen }),
+
+  monumentModeOn: false,
+  setMonumentModeOn: (monumentModeOn) => set({ monumentModeOn }),
 
   reset: () =>
     set({
