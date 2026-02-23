@@ -1,0 +1,10 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "devCommand": "npm run dev",
+  "installCommand": "npm install",
+  "functions": {
+    "src/app/api/world-state/route.ts": { "maxDuration": 15 },
+    "src/app/api/generate-ai/route.ts": { "maxDuration": 60 }
+  }
+}
