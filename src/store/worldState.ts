@@ -37,6 +37,9 @@ interface WorldStateStore {
   monumentModeOn: boolean
   setMonumentModeOn: (v: boolean) => void
 
+  immersiveMode: boolean
+  setImmersiveMode: (v: boolean) => void
+
   reset: () => void
 }
 
@@ -83,8 +86,11 @@ export const useWorldStateStore = create<WorldStateStore>((set) => ({
   citySearchOpen: false,
   setCitySearchOpen: (citySearchOpen) => set({ citySearchOpen }),
 
-  monumentModeOn: false,
+  monumentModeOn: true,
   setMonumentModeOn: (monumentModeOn) => set({ monumentModeOn }),
+
+  immersiveMode: false,
+  setImmersiveMode: (immersiveMode) => set({ immersiveMode }),
 
   reset: () =>
     set({

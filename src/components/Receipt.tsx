@@ -4,7 +4,7 @@ import { useState, useCallback, useRef, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import type { WorldState } from '@/types/worldstate'
 import { buildShareUrl } from '@/lib/worldstate'
-import { useIsMobile } from '@/lib/useIsMobile'
+import { useIsMobile, useIsLandscape } from '@/lib/useIsMobile'
 import { useWorldStateStore } from '@/store/worldState'
 
 interface ReceiptProps {
@@ -312,14 +312,23 @@ function DecoderTable({ primaryHue }: { primaryHue: number }) {
 }
 
 // ─── Main Receipt ─────────────────────────────────────────────────────────────
+// Detect iOS Safari (Fullscreen API not supported)
+function isIOSDevice(): boolean {
+  if (typeof navigator === 'undefined') return false
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+}
+
 export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
   const isMobile = useIsMobile()
+  const isLandscape = useIsLandscape()
   const setControlPanelOpen = useWorldStateStore((s) => s.setControlPanelOpen)
   const mosaicMode          = useWorldStateStore((s) => s.mosaicMode)
   const setMosaicMode       = useWorldStateStore((s) => s.setMosaicMode)
   const setCitySearchOpen   = useWorldStateStore((s) => s.setCitySearchOpen)
   const monumentModeOn      = useWorldStateStore((s) => s.monumentModeOn)
   const setMonumentModeOn   = useWorldStateStore((s) => s.setMonumentModeOn)
+  const immersiveMode       = useWorldStateStore((s) => s.immersiveMode)
+  const setImmersiveMode    = useWorldStateStore((s) => s.setImmersiveMode)
   // Default collapsed on mobile so art is visible; expanded on desktop
   const [collapsed, setCollapsed] = useState(true)
   const [showDecoder, setShowDecoder] = useState(false)
@@ -332,13 +341,21 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
   }, [setControlPanelOpen])
 
   const toggleFullscreen = useCallback(async () => {
+    // iOS Safari doesn't support Fullscreen API — use immersive mode instead
+    if (isIOSDevice()) {
+      setImmersiveMode(!immersiveMode)
+      return
+    }
     const doc = document as any; const el = document.documentElement as any
     const inFS = !!document.fullscreenElement || !!doc.webkitFullscreenElement
     await (inFS
       ? (document.exitFullscreen ?? doc.webkitExitFullscreen)?.call(document)
       : (el.requestFullscreen ?? el.webkitRequestFullscreen)?.call(el)
-    )?.catch(() => {})
-  }, [])
+    )?.catch(() => {
+      // Fallback: if fullscreen fails (e.g. on iOS despite non-iOS detection), use immersive mode
+      setImmersiveMode(!immersiveMode)
+    })
+  }, [immersiveMode, setImmersiveMode])
 
   useEffect(() => {
     const onChange = () =>
@@ -490,7 +507,13 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
   return (
     <div
       className={`receipt-panel slot-emerge ${collapsed ? 'collapsed' : 'expanded'}`}
-      style={{ borderTop: `1px solid hsl(${primaryHue},35%,22%)`, transition: 'border-color 0.8s ease, max-height 0.4s cubic-bezier(0.4,0,0.2,1)' }}
+      style={{
+        borderTop: `1px solid hsl(${primaryHue},35%,22%)`,
+        transition: 'border-color 0.8s ease, max-height 0.4s cubic-bezier(0.4,0,0.2,1), transform 0.35s cubic-bezier(0.4,0,0.2,1), opacity 0.35s',
+        transform: immersiveMode ? 'translateY(100%)' : 'translateY(0)',
+        opacity: immersiveMode ? 0 : 1,
+        pointerEvents: immersiveMode ? 'none' : 'auto',
+      }}
     >
       {/* ── Drag pill (mobile only) ── */}
       {isMobile && (
@@ -567,17 +590,17 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
                   </span>
                 </span>
               )}
-              {/* FULLSCREEN */}
+              {/* FULLSCREEN / IMMERSIVE */}
               <span
                 role="button"
                 tabIndex={0}
                 onClick={(e) => { e.stopPropagation(); toggleFullscreen() }}
                 onKeyDown={(e) => e.key === 'Enter' && (e.stopPropagation(), toggleFullscreen())}
-                aria-label={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+                aria-label={isFullscreen || immersiveMode ? 'Salir de pantalla completa' : 'Pantalla completa'}
                 style={iconBtnStyle}
               >
                 <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                  {isFullscreen ? (
+                  {(isFullscreen || immersiveMode) ? (
                     <>
                       <path d="M5 2 L3 2 L3 4"   stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
                       <path d="M9 2 L11 2 L11 4"  stroke="currentColor" strokeWidth="1" strokeLinecap="round" strokeLinejoin="round"/>
@@ -650,11 +673,11 @@ export default function Receipt({ worldState, onNuevaVision }: ReceiptProps) {
           overflow: collapsed ? 'hidden' : 'visible',
         }}
       >
-        {/* Signal grid */}
+        {/* Signal grid — more columns in landscape to use full width */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gridTemplateColumns: isLandscape ? 'repeat(4, 1fr)' : (isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)'),
             gap: 'var(--sp-2)',
             marginBottom: 'var(--sp-3)',
           }}

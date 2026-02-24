@@ -6,6 +6,7 @@ import { seedToNumber } from '@/lib/worldstate'
 import { buildMosaicGrid, type FontGrid, type FontGridCell } from '@/lib/pixelFont'
 import { getDominantConstellation, type ConstellationResult } from '@/lib/constellation'
 import { useDeviceMotion } from '@/lib/useDeviceMotion'
+import { useIsLandscape } from '@/lib/useIsMobile'
 
 // Pixel font grid of generative algorithms — all fed by the same WorldState
 // Each active pixel of the city code (CDMX, MAD, NYC…) runs one of 13 algorithms.
@@ -15,6 +16,7 @@ export default function ArtCanvasInner() {
   const canvasRef     = useRef<HTMLCanvasElement>(null)
   const animFrameRef  = useRef<number>(0)
   const { tiltRef, shakeRef } = useDeviceMotion()
+  const isLandscape   = useIsLandscape()  // causes effect re-run on orientation change → rebuilds grid
   const lastShakeFrame = useRef(0)
   const monumentRef   = useRef<{
     img:           HTMLImageElement | null
@@ -106,6 +108,10 @@ export default function ArtCanvasInner() {
     type LightningBolt = { x1: number; y1: number; x2: number; y2: number; age: number; maxAge: number; jags: {x:number;y:number}[] }
     const plasmaStates = new Map<string, { bolts: LightningBolt[]; nextBolt: number }>()
     const vortexStates = new Map<string, { angle: number }>()
+
+    // ── Size canvas to screen BEFORE building grid (avoids 300×150 default on first mount) ──
+    canvas.width  = window.innerWidth
+    canvas.height = window.innerHeight
 
     // ── Build mosaic grid — entire canvas filled with ~20px cells ───────────
     const grid = buildMosaicGrid(mosaicLabel, canvas.width, canvas.height, seedNum)
@@ -1229,11 +1235,14 @@ export default function ArtCanvasInner() {
         ctx.fillRect(effectiveOffsetX + fc * cW + GAP, effectiveOffsetY + fr * cH + GAP, cW - 2 * GAP, cH - 2 * GAP)
       }
 
-      // ── Constellation overlay: top-right corner ──────────────────────────────
+      // ── Constellation overlay: top-right corner (stacks below monument on narrow screens) ──
       if (constellationResult) {
         const BOX_W = 178, BOX_H = 158, PAD = 18
+        const MONUMENT_OVW = 220, MONUMENT_OVH = 42
         const bx = W - BOX_W - PAD
-        const by = PAD
+        // On narrow screens (< ~452px) both boxes would overlap — push constellation below monument
+        const wouldOverlap = W < (MONUMENT_OVW + BOX_W + PAD * 3) && !!monumentRef.current?.name
+        const by = wouldOverlap ? PAD + MONUMENT_OVH + 8 : PAD
         const LABEL_H = 34   // space at bottom for name labels
         const STAR_H  = BOX_H - LABEL_H
 
@@ -1375,7 +1384,7 @@ export default function ArtCanvasInner() {
       canvas.removeEventListener('touchstart', onTouchStart)
       if (DEV) window.removeEventListener('keydown', onKeyP)
     }
-  }, [artParams, worldState, mosaicMode])
+  }, [artParams, worldState, mosaicMode, isLandscape])
 
   // ── Monument loading: fetch image whenever city changes ──────────────────
   useEffect(() => {

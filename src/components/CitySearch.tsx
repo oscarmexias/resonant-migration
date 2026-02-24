@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useWorldStateStore } from '@/store/worldState'
 import { fetchWorldState, deriveArtParams } from '@/lib/worldstate'
-import { useIsMobile } from '@/lib/useIsMobile'
+import { useIsMobile, useIsLandscape } from '@/lib/useIsMobile'
 
 // ── Fullscreen icon ───────────────────────────────────────────────────────────
 function FullscreenIcon({ active }: { active: boolean }) {
@@ -62,6 +62,7 @@ export default function CitySearch() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isMobile = useIsMobile()
+  const isLandscape = useIsLandscape()
 
   const {
     setPhase, setLocation, setWorldState, setArtParams, setError,
@@ -69,6 +70,7 @@ export default function CitySearch() {
     controlPanelOpen,
     citySearchOpen, setCitySearchOpen,
     monumentModeOn, setMonumentModeOn,
+    immersiveMode,
   } = useWorldStateStore()
 
   // ── Open / close ────────────────────────────────────────────────────────────
@@ -224,8 +226,13 @@ export default function CitySearch() {
     e.currentTarget.style.background  = 'rgba(4,4,14,0.78)'
   }
 
-  // Search bar visible when receipt is collapsed (both mobile and desktop)
-  const searchBarVisible = !controlPanelOpen
+  // Search bar visible when receipt is collapsed (both mobile and desktop), hidden in immersive mode
+  const searchBarVisible = !controlPanelOpen && !immersiveMode
+
+  // Compact width: 220px desktop, wider in landscape mobile, fits narrow screens
+  const barWidth = isMobile
+    ? (isLandscape ? 'min(320px, calc(100vw - 200px))' : 'min(220px, calc(100vw - 40px))')
+    : '220px'
 
   return (
     <>
@@ -233,11 +240,11 @@ export default function CitySearch() {
       <div
         style={{
           position:  'fixed',
-          bottom:    isMobile ? '76px' : '60px',
+          bottom:    isMobile ? '72px' : '56px',
           left:      '50%',
           transform: 'translateX(-50%)',
           zIndex:    50,
-          width:     isMobile ? 'min(300px, calc(100vw - 32px))' : '300px',
+          width:     barWidth,
           opacity:   searchBarVisible ? 1 : 0,
           pointerEvents: searchBarVisible ? 'auto' : 'none',
           transition: 'opacity 0.2s',
@@ -313,25 +320,25 @@ export default function CitySearch() {
           style={{
             display:             'flex',
             alignItems:          'center',
-            gap:                 '8px',
-            padding:             '0 12px',
-            height:              isMobile ? '44px' : '38px',
-            background:          isOpen ? 'rgba(4,4,14,0.96)' : 'rgba(4,4,14,0.78)',
-            border:              isOpen ? '1px solid rgba(255,255,255,0.22)' : '1px solid rgba(255,255,255,0.11)',
+            gap:                 '7px',
+            padding:             '0 10px',
+            height:              isMobile ? '40px' : '32px',
+            background:          isOpen ? 'rgba(4,4,14,0.96)' : 'rgba(4,4,14,0.72)',
+            border:              isOpen ? '1px solid rgba(255,255,255,0.18)' : '1px solid rgba(255,255,255,0.09)',
             backdropFilter:      'blur(10px)',
             WebkitBackdropFilter:'blur(10px)',
             transition:          'border-color 0.18s, background 0.18s',
             cursor:              'text',
           }}
         >
-          <Crosshair size={11} opacity={isOpen ? 0.5 : 0.28} />
+          <Crosshair size={9} opacity={isOpen ? 0.45 : 0.22} />
           <input
             ref={inputRef}
             value={query}
             onChange={handleChange}
             onFocus={() => setIsOpen(true)}
             onKeyDown={handleKeyDown}
-            placeholder="BUSCAR DESTINO…"
+            placeholder="BUSCAR DESTINO"
             autoComplete="off"
             autoCorrect="off"
             autoCapitalize="none"
@@ -342,14 +349,14 @@ export default function CitySearch() {
               background:    'none',
               border:        'none',
               outline:       'none',
-              color:         'rgba(255,255,255,0.88)',
+              color:         'rgba(255,255,255,0.82)',
               fontFamily:    'var(--font-mono)',
               // globals.css overrides to 16px on mobile — prevents iOS auto-zoom
-              fontSize:      '10px',
-              letterSpacing: '0.10em',
+              fontSize:      '9px',
+              letterSpacing: '0.14em',
               padding:       0,
               width:         '100%',
-              caretColor:    'rgba(255,255,255,0.6)',
+              caretColor:    'rgba(255,255,255,0.5)',
               WebkitTapHighlightColor: 'transparent',
             }}
           />

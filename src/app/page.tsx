@@ -26,6 +26,7 @@ export default function Home() {
     setSignalStatus,
     locationDenied, setLocationDenied,
     worldState, reset,
+    immersiveMode, setImmersiveMode,
   } = useWorldStateStore()
 
   const startAwakening = useCallback(() => {
@@ -210,6 +211,43 @@ export default function Home() {
 
       {/* City search — available while art is visible */}
       {phase === 'output' && <CitySearch />}
+
+      {/* Immersive mode exit — tap anywhere indicator (iOS full view workaround) */}
+      {phase === 'output' && immersiveMode && (
+        <button
+          onClick={() => setImmersiveMode(false)}
+          aria-label="Salir de vista completa"
+          style={{
+            position:            'fixed',
+            top:                 16,
+            right:               16,
+            zIndex:              100,
+            background:          'rgba(4,4,14,0.70)',
+            border:              '1px solid rgba(255,255,255,0.12)',
+            backdropFilter:      'blur(8px)',
+            WebkitBackdropFilter:'blur(8px)',
+            color:               'rgba(255,255,255,0.45)',
+            fontFamily:          'var(--font-mono)',
+            fontSize:            '9px',
+            letterSpacing:       '0.18em',
+            padding:             '0 12px',
+            height:              '32px',
+            display:             'flex',
+            alignItems:          'center',
+            gap:                 '6px',
+            cursor:              'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+            <path d="M4 2 L2 2 L2 4" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 2 L8 2 L8 4" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M4 8 L2 8 L2 6" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+            <path d="M6 8 L8 8 L8 6" stroke="currentColor" strokeWidth="0.9" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          EXIT
+        </button>
+      )}
 
       {/* Landscape nudge — portrait mobile only */}
       {phase === 'output' && <LandscapeHint />}

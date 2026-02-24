@@ -11,3 +11,14 @@ export function useIsMobile(breakpoint = 768): boolean {
   }, [breakpoint])
   return isMobile
 }
+
+export function useIsLandscape(): boolean {
+  const [isLandscape, setIsLandscape] = useState(false)
+  useEffect(() => {
+    const check = () => setIsLandscape(window.innerWidth > window.innerHeight)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+  return isLandscape
+}
