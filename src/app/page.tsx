@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useWorldStateStore } from '@/store/worldState'
 import { fetchWorldState, deriveArtParams, decodeSharePayload } from '@/lib/worldstate'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { useInteractions } from '@/lib/useInteractions'
 import { VISIONS, type VisionType } from '@/types/vision'
 import ElOjo from '@/components/ElOjo'
 import SignalLoader from '@/components/SignalLoader'
@@ -97,7 +98,7 @@ export default function Home() {
     }
   }, [setPhase, setLocation, setWorldState, setArtParams, setError, setLocationDenied, setSignalStatus])
 
-  // Handle URL params (vision + share links)
+  // Handle URL params (vision + share links) - only on mount
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const visionParam = params.get('vision') as VisionType | null
@@ -105,9 +106,7 @@ export default function Home() {
     // Check if vision is valid
     if (visionParam && Object.keys(VISIONS).includes(visionParam)) {
       setVision(visionParam)
-    } else if (!selectedVision) {
-      // No vision selected yet and no valid param → stay on vision-select
-      setPhase('vision-select')
+      // Don't set phase to idle here, let handleVisionSelect do it
       return
     }
 
@@ -160,6 +159,9 @@ export default function Home() {
     setPhase('idle')
   }, [setVision, setPhase])
 
+  // Interactions (click, mic, shake) active during output phase
+  const { handleClick, isShaking, micLevel } = useInteractions(phase === 'output')
+
   const showVisionSelector = phase === 'vision-select'
   const showCanvas   = phase === 'generating' || phase === 'output'
   const showEye      = phase === 'idle' || phase === 'requesting-location' || phase === 'loading-signals' || phase === 'generating'
@@ -168,6 +170,7 @@ export default function Home() {
   return (
     <main
       id="generation"
+      onClick={phase === 'output' ? handleClick : undefined}
       style={{
         position: 'relative',
         width: '100%',
@@ -179,6 +182,7 @@ export default function Home() {
         flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        cursor: phase === 'output' ? 'pointer' : 'default',
       }}
     >
       {/* Vision Selector — first screen */}
@@ -239,6 +243,43 @@ export default function Home() {
 
       {phase === 'output' && worldState && (
         <Receipt worldState={worldState} onNuevaVision={reset} />
+      )}
+
+      {/* Back button — return to vision selector */}
+      {(phase === 'idle' || phase === 'output') && selectedVision && (
+        <button
+          onClick={() => {
+            setVision(null)
+            setPhase('vision-select')
+          }}
+          aria-label="Volver a selector de visiones"
+          style={{
+            position: 'fixed',
+            top: 16,
+            left: 16,
+            zIndex: 100,
+            background: 'rgba(4,4,14,0.70)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            color: 'rgba(255,255,255,0.45)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: '9px',
+            letterSpacing: '0.18em',
+            padding: '0 12px',
+            height: '32px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" style={{ opacity: 0.6 }}>
+            <path d="M6 2 L3 5 L6 8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          VISIONES
+        </button>
       )}
 
       {/* City search — available while art is visible */}

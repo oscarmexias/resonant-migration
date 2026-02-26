@@ -2,13 +2,15 @@
 
 import { useState, useEffect } from 'react'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { useLandscapeHintSeen } from '@/lib/useLandscapeHintSeen'
 
 // Shows a subtle "rotate to landscape" nudge in portrait mode on mobile.
-// Auto-dismisses after 5 s; user can also tap to dismiss permanently in the session.
+// Only shows once per device (persisted in localStorage).
+// Auto-dismisses after 5 s; user can also tap to dismiss.
 export default function LandscapeHint() {
   const isMobile = useIsMobile()
   const [portrait, setPortrait] = useState(false)
-  const [dismissed, setDismissed] = useState(false)
+  const [hasSeenHint, markHintAsSeen] = useLandscapeHintSeen()
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
@@ -25,19 +27,25 @@ export default function LandscapeHint() {
     }
   }, [isMobile])
 
-  // Show after a short delay; auto-dismiss after 5 s
+  // Show after a short delay; auto-dismiss after 5 s (only if not seen before)
   useEffect(() => {
-    if (!portrait || dismissed || !isMobile) { setVisible(false); return }
+    if (!portrait || hasSeenHint || !isMobile) { setVisible(false); return }
     const show = setTimeout(() => setVisible(true), 1200)
-    const hide = setTimeout(() => setVisible(false), 6200)
+    const hide = setTimeout(() => {
+      setVisible(false)
+      markHintAsSeen() // Mark as seen after auto-dismiss
+    }, 6200)
     return () => { clearTimeout(show); clearTimeout(hide) }
-  }, [portrait, dismissed, isMobile])
+  }, [portrait, hasSeenHint, isMobile, markHintAsSeen])
 
   if (!visible) return null
 
   return (
     <button
-      onClick={() => { setDismissed(true); setVisible(false) }}
+      onClick={() => {
+        setVisible(false)
+        markHintAsSeen() // Mark as seen on manual dismiss
+      }}
       aria-label="Rotar a horizontal para mejor experiencia"
       style={{
         position:        'fixed',
