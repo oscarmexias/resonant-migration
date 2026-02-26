@@ -46,6 +46,25 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             })(window,document,'script','dataLayer','GTM-WN2HNWS6');`,
           }}
         />
+
+        {/* Google Analytics 4 (GA4) */}
+        <Script
+          id="ga4-script"
+          strategy="afterInteractive"
+          src="https://www.googletagmanager.com/gtag/js?id=G-X500VC9SQM"
+        />
+        <Script
+          id="ga4-config"
+          strategy="afterInteractive"
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-X500VC9SQM');
+            `,
+          }}
+        />
       </head>
       <body>
         {/* Google Tag Manager (noscript) */}
