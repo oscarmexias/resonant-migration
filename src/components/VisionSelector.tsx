@@ -5,6 +5,7 @@ import { VISIONS, type VisionType } from '@/types/vision'
 
 interface VisionSelectorProps {
   onSelect: (vision: VisionType) => void
+  overMonument?: boolean
 }
 
 export function VisionSelector({ onSelect }: VisionSelectorProps) {

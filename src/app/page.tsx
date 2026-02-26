@@ -8,7 +8,7 @@ import { useIsMobile } from '@/lib/useIsMobile'
 import { useVisionInteractions } from '@/lib/useVisionInteractions'
 import { VISIONS, type VisionType } from '@/types/vision'
 import ElOjo from '@/components/ElOjo'
-import SignalLoader from '@/components/SignalLoader'
+import MonumentLoader from '@/components/MonumentLoader'
 import Receipt from '@/components/Receipt'
 import AwakeningSequence from '@/components/AwakeningSequence'
 import CitySearch from '@/components/CitySearch'
@@ -30,6 +30,7 @@ export default function Home() {
     worldState, reset,
     immersiveMode, setImmersiveMode,
     selectedVision, setVision,
+    setMonumentData,
   } = useWorldStateStore()
 
   const startAwakening = useCallback(() => {
@@ -79,23 +80,49 @@ export default function Home() {
       const ws = await fetchWorldState(lat, lng)
       staggerTimers.forEach(clearTimeout)
 
+      // Store world state immediately so art generation is ready
+      setWorldState(ws)
+      setArtParams(deriveArtParams(ws))
+
+      // Fetch monument non-blocking using cityCode from worldState
+      const cityCode = ws.location.cityCode ?? ''
+      const cityName = ws.location.city ?? ''
+      if (cityCode || cityName) {
+        fetch(
+          `/api/monument?cityCode=${encodeURIComponent(cityCode)}&city=${encodeURIComponent(cityName)}`,
+        )
+          .then((r) => r.json())
+          .then((m: { name?: string | null; imageUrl?: string | null; landmarkType?: number | null }) => {
+            if (m && m.name) {
+              setMonumentData({
+                name: m.name,
+                imageProxyUrl: m.imageUrl
+                  ? `/api/monument-image?url=${encodeURIComponent(m.imageUrl)}`
+                  : null,
+                landmarkType: m.landmarkType ?? 0,
+              })
+            }
+          })
+          .catch(() => {
+            // Monument fetch failed — MonumentLoader works without photo
+          })
+      }
+
+      // Stagger signal successes — MonumentLoader watches these and transitions
+      // phase to 'vision-select' once all 6 are 'success'
       for (let i = 0; i < SIGNAL_KEYS.length; i++) {
         await new Promise((r) => setTimeout(r, 80))
         setSignalStatus(SIGNAL_KEYS[i], 'success')
       }
-
-      setWorldState(ws)
-      setArtParams(deriveArtParams(ws))
-      setPhase('generating')
-      await new Promise((r) => setTimeout(r, 900))
-      setPhase('output')
+      // Phase transition (loading-signals → vision-select) is handled by MonumentLoader
+      // after its 1200ms delay once all signals are 'success'.
     } catch (err) {
       staggerTimers.forEach(clearTimeout)
       SIGNAL_KEYS.forEach((key) => setSignalStatus(key, 'error'))
       setError(err instanceof Error ? err.message : 'Unknown error')
       setPhase('error')
     }
-  }, [setPhase, setLocation, setWorldState, setArtParams, setError, setLocationDenied, setSignalStatus])
+  }, [setPhase, setLocation, setWorldState, setArtParams, setError, setLocationDenied, setSignalStatus, setMonumentData])
 
   // Handle URL params (vision + share links) - only on mount
   useEffect(() => {
@@ -156,8 +183,15 @@ export default function Home() {
 
   const handleVisionSelect = useCallback((vision: VisionType) => {
     setVision(vision)
-    setPhase('idle')
-  }, [setVision, setPhase])
+    // If worldState is already loaded (post-signal vision-select), go straight to generating
+    if (worldState) {
+      setPhase('generating')
+      // Brief generating delay then output
+      setTimeout(() => setPhase('output'), 900)
+    } else {
+      setPhase('idle')
+    }
+  }, [setVision, setPhase, worldState])
 
   // Interactions (click, mic, shake) active during output phase - vision-specific
   const [interactionState, handleClick] = useVisionInteractions(selectedVision, phase === 'output')
@@ -239,7 +273,7 @@ export default function Home() {
         </div>
       )}
 
-      {phase === 'loading-signals' && <SignalLoader />}
+      {phase === 'loading-signals' && <MonumentLoader />}
 
       {phase === 'output' && worldState && (
         <Receipt worldState={worldState} onNuevaVision={reset} />
