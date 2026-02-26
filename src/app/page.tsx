@@ -163,7 +163,7 @@ export default function Home() {
   const [interactionState, handleClick] = useVisionInteractions(selectedVision, phase === 'output')
 
   const showVisionSelector = phase === 'vision-select'
-  const showCanvas   = phase === 'generating' || phase === 'output'
+  const showCanvas   = (phase === 'generating' || phase === 'output') && selectedVision !== null
   const showEye      = phase === 'idle' || phase === 'requesting-location' || phase === 'loading-signals' || phase === 'generating'
   const showAwakening = phase === 'awakening'
 
