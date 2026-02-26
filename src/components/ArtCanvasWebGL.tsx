@@ -4,22 +4,40 @@ import { useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { useWorldStateStore } from '@/store/worldState'
 import { getOptimalPixelRatio, type DeviceTier } from '@/lib/deviceTier'
-import { fragGLSL, vertGLSL } from '@/shaders/domainWarp.glsl'
+import * as surveillance from '@/shaders/surveillance.glsl'
+import * as glitch from '@/shaders/glitch.glsl'
+import * as volumetric from '@/shaders/volumetric.glsl'
+import * as brutalist from '@/shaders/brutalist.glsl'
+import * as organism from '@/shaders/organism.glsl'
 import { seedToNumber } from '@/lib/worldstate'
 import { getLandmarkType } from '@/lib/monumentData'
+import type { VisionType } from '@/types/vision'
+
+const SHADER_MAP = {
+  surveillance,
+  glitch,
+  volumetric,
+  brutalist,
+  organism,
+}
 
 interface Props {
   tier: DeviceTier
 }
 
 export default function ArtCanvasWebGL({ tier }: Props) {
-  const mountRef   = useRef<HTMLDivElement>(null)
-  const worldState = useWorldStateStore((s) => s.worldState)
-  const artParams  = useWorldStateStore((s) => s.artParams)
+  const mountRef     = useRef<HTMLDivElement>(null)
+  const worldState   = useWorldStateStore((s) => s.worldState)
+  const artParams    = useWorldStateStore((s) => s.artParams)
+  const selectedVision = useWorldStateStore((s) => s.selectedVision)
 
   useEffect(() => {
     const mount = mountRef.current
-    if (!mount || !worldState || !artParams) return
+    if (!mount || !worldState || !artParams || !selectedVision) return
+
+    // Select shader module based on vision
+    const shaderModule = SHADER_MAP[selectedVision as VisionType]
+    if (!shaderModule) return
 
     // ── Renderer ───────────────────────────────────────────────────────────────
     const renderer = new THREE.WebGLRenderer({
@@ -74,8 +92,8 @@ export default function ArtCanvasWebGL({ tier }: Props) {
     }
 
     const material = new THREE.ShaderMaterial({
-      vertexShader:   vertGLSL,
-      fragmentShader: fragGLSL,
+      vertexShader:   shaderModule.vertGLSL,
+      fragmentShader: shaderModule.fragGLSL,
       uniforms,
     })
 
@@ -111,7 +129,7 @@ export default function ArtCanvasWebGL({ tier }: Props) {
       renderer.dispose()
       if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
     }
-  }, [worldState, artParams, tier])
+  }, [worldState, artParams, tier, selectedVision])
 
   return (
     <div

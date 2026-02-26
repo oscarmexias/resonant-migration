@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import type { WorldState, SignalState, ArtParams } from '@/types/worldstate'
+import type { VisionType } from '@/types/vision'
 
-export type AppPhase = 'idle' | 'awakening' | 'requesting-location' | 'loading-signals' | 'generating' | 'output' | 'error'
+export type AppPhase = 'vision-select' | 'idle' | 'awakening' | 'requesting-location' | 'loading-signals' | 'generating' | 'output' | 'error'
 
 interface WorldStateStore {
   phase: AppPhase
@@ -40,6 +41,9 @@ interface WorldStateStore {
   immersiveMode: boolean
   setImmersiveMode: (v: boolean) => void
 
+  selectedVision: VisionType | null
+  setVision: (vision: VisionType | null) => void
+
   reset: () => void
 }
 
@@ -55,7 +59,7 @@ const initialSignals: SignalState = {
 }
 
 export const useWorldStateStore = create<WorldStateStore>((set) => ({
-  phase: 'idle',
+  phase: 'vision-select',
   setPhase: (phase) => set({ phase }),
 
   location: null,
@@ -92,13 +96,17 @@ export const useWorldStateStore = create<WorldStateStore>((set) => ({
   immersiveMode: false,
   setImmersiveMode: (immersiveMode) => set({ immersiveMode }),
 
+  selectedVision: null,
+  setVision: (selectedVision) => set({ selectedVision }),
+
   reset: () =>
     set({
-      phase: 'idle',
+      phase: 'vision-select',
       signals: initialSignals,
       worldState: null,
       artParams: null,
       error: null,
       locationDenied: false,
+      selectedVision: null,
     }),
 }))

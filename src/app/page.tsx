@@ -5,12 +5,14 @@ import dynamic from 'next/dynamic'
 import { useWorldStateStore } from '@/store/worldState'
 import { fetchWorldState, deriveArtParams, decodeSharePayload } from '@/lib/worldstate'
 import { useIsMobile } from '@/lib/useIsMobile'
+import { VISIONS, type VisionType } from '@/types/vision'
 import ElOjo from '@/components/ElOjo'
 import SignalLoader from '@/components/SignalLoader'
 import Receipt from '@/components/Receipt'
 import AwakeningSequence from '@/components/AwakeningSequence'
 import CitySearch from '@/components/CitySearch'
 import LandscapeHint from '@/components/LandscapeHint'
+import { VisionSelector } from '@/components/VisionSelector'
 
 // Three.js requires browser — no SSR
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
@@ -27,6 +29,7 @@ export default function Home() {
     locationDenied, setLocationDenied,
     worldState, reset,
     immersiveMode, setImmersiveMode,
+    selectedVision, setVision,
   } = useWorldStateStore()
 
   const startAwakening = useCallback(() => {
@@ -94,9 +97,20 @@ export default function Home() {
     }
   }, [setPhase, setLocation, setWorldState, setArtParams, setError, setLocationDenied, setSignalStatus])
 
-  // Handle share links
+  // Handle URL params (vision + share links)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
+    const visionParam = params.get('vision') as VisionType | null
+
+    // Check if vision is valid
+    if (visionParam && Object.keys(VISIONS).includes(visionParam)) {
+      setVision(visionParam)
+    } else if (!selectedVision) {
+      // No vision selected yet and no valid param → stay on vision-select
+      setPhase('vision-select')
+      return
+    }
+
     const lat = parseFloat(params.get('lat') ?? '')
     const lng = parseFloat(params.get('lng') ?? '')
     const encoded = params.get('d')
@@ -130,8 +144,23 @@ export default function Home() {
           setPhase('error')
         })
     }
-  }, [setPhase, setLocation, setWorldState, setArtParams, setError])
+  }, [setPhase, setLocation, setWorldState, setArtParams, setError, setVision, selectedVision])
 
+  // Update URL when vision is selected
+  useEffect(() => {
+    if (selectedVision && typeof window !== 'undefined') {
+      const url = new URL(window.location.href)
+      url.searchParams.set('vision', selectedVision)
+      window.history.replaceState({}, '', url.toString())
+    }
+  }, [selectedVision])
+
+  const handleVisionSelect = useCallback((vision: VisionType) => {
+    setVision(vision)
+    setPhase('idle')
+  }, [setVision, setPhase])
+
+  const showVisionSelector = phase === 'vision-select'
   const showCanvas   = phase === 'generating' || phase === 'output'
   const showEye      = phase === 'idle' || phase === 'requesting-location' || phase === 'loading-signals' || phase === 'generating'
   const showAwakening = phase === 'awakening'
@@ -152,6 +181,9 @@ export default function Home() {
         justifyContent: 'center',
       }}
     >
+      {/* Vision Selector — first screen */}
+      {showVisionSelector && <VisionSelector onSelect={handleVisionSelect} />}
+
       {/* Ambient glow on idle screen */}
       {(phase === 'idle' || phase === 'awakening') && <div className="idle-ambient" />}
 
