@@ -12,7 +12,6 @@ import SignalLoader from '@/components/SignalLoader'
 import Receipt from '@/components/Receipt'
 import AwakeningSequence from '@/components/AwakeningSequence'
 import CitySearch from '@/components/CitySearch'
-import LandscapeHint from '@/components/LandscapeHint'
 import { VisionSelector } from '@/components/VisionSelector'
 
 // Three.js requires browser — no SSR
@@ -143,7 +142,8 @@ export default function Home() {
           setPhase('error')
         })
     }
-  }, [setPhase, setLocation, setWorldState, setArtParams, setError, setVision, selectedVision])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setPhase, setLocation, setWorldState, setArtParams, setError, setVision])
 
   // Update URL when vision is selected
   useEffect(() => {
@@ -249,6 +249,9 @@ export default function Home() {
       {(phase === 'idle' || phase === 'output') && selectedVision && (
         <button
           onClick={() => {
+            const url = new URL(window.location.href)
+            url.searchParams.delete('vision')
+            window.history.replaceState({}, '', url.toString())
             setVision(null)
             setPhase('vision-select')
           }}
@@ -322,8 +325,7 @@ export default function Home() {
         </button>
       )}
 
-      {/* Landscape nudge — portrait mobile only */}
-      {phase === 'output' && <LandscapeHint />}
+      {/* Landscape nudge removed per user request */}
 
       {phase === 'error' && (
         <div

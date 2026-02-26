@@ -27,6 +27,7 @@ uniform float uGyroGamma; // -90 to 90
 varying vec2 vUv;
 
 // Simplex noise 3D
+vec3 _mod289(vec3 x){return x-floor(x*(1./289.))*289.;}
 vec4 _mod289(vec4 x){return x-floor(x*(1./289.))*289.;}
 vec4 _perm(vec4 x){return _mod289(((x*34.)+1.)*x);}
 vec4 _taylorInvSqrt(vec4 r){return 1.79284291400159-.85373472095314*r;}
