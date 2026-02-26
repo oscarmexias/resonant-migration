@@ -135,27 +135,27 @@ void main(){
     // POINT DENSITY via 3D noise
     float density=0.;
 
-    // Layer 1: General scatter (volat drives chaos) - INCREASED
+    // Layer 1: General scatter (volat drives chaos)
     float scatter=snoise(pos*2.+vec3(uSeed.x*5.,uSeed.y*3.,uTime*.2));
-    density+=max(0., scatter)*1.5*max(volat, .3);
+    density+=max(0., scatter)*0.6*max(volat, .3);
 
-    // Layer 2: Upper volume (kp drives density) - INCREASED
-    if(pos.y>.2){
-      density+=kp*1.2*smoothstep(.2,1.8,pos.y);
-    }
-
-    // Layer 3: Monument dense cluster at center - INCREASED + LARGER
+    // Layer 2: Upper volume (kp drives density)
     float distToCenter=length(pos);
-    if(distToCenter<1.2){
-      density+=2.0*smoothstep(1.2,.0,distToCenter);
+    if(pos.y>.2){
+      density+=kp*0.5*smoothstep(.2,1.8,pos.y);
     }
 
-    // Layer 4: Seismic vertical displacement - INCREASED
-    float vertWave=snoise(vec3(pos.x*4., pos.z*4., uTime*.3+uSeed.y))*seismic;
-    density+=max(0., vertWave)*1.2;
+    // Layer 3: Monument dense cluster at center
+    if(distToCenter<1.2){
+      density+=1.0*smoothstep(1.2,.0,distToCenter);
+    }
 
-    // Base ambient density so we always see something - EXTREMELY HIGH
-    density+=1.0;
+    // Layer 4: Seismic vertical displacement
+    float vertWave=snoise(vec3(pos.x*4., pos.z*4., uTime*.3+uSeed.y))*seismic;
+    density+=max(0., vertWave)*0.5;
+
+    // Small ambient so dark areas still have some glow
+    density+=0.05;
 
     // POINT COLOR
     vec3 pointCol;
@@ -169,8 +169,8 @@ void main(){
       pointCol=mix(pointCol, vec3(1.,.25,.15), conflict*.5);
     }
 
-    // ACCUMULATE COLOR - EXTREMELY VISIBLE
-    float alpha=density*2.0;
+    // ACCUMULATE — clamp per-step so 48 iterations don't saturate
+    float alpha=clamp(density*0.08, 0., 0.5);
     col+=pointCol*alpha;
 
     // STEP FORWARD
@@ -183,14 +183,17 @@ void main(){
   vec3 fogCol=mix(vec3(.08,.12,.20), vec3(.20,.18,.12), temp);
   col=mix(fogCol, col, fogFactor);
 
-  // BACKGROUND GRADIENT (much brighter)
+  // BACKGROUND GRADIENT
   float bgGrad=smoothstep(-.5,1., p.y);
   vec3 bgCol=mix(vec3(.08,.10,.18), vec3(.15,.20,.30), bgGrad);
-  col+=bgCol*1.2;
+  col+=bgCol*0.4;
 
   // VIGNETTE
   float vig=1.-dot(p*.5,p*.5);
   col*=vig;
+
+  // REINHARD TONE MAP — prevents saturation/white-out regardless of density
+  col=col/(col+1.0);
 
   // GAMMA
   col=pow(max(col,0.),vec3(.4545));
