@@ -1,6 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getMonument, getMonumentByCity } from '@/lib/monumentData'
 
+// In-memory rate limiter: 30 req/min per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 30
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
 // GET /api/monument?cityCode=MAD&city=Madrid
 // Returns: { name, nameEs, myth, imageUrl } or nulls if not found
 //
@@ -82,6 +98,11 @@ async function searchWikiMonument(city: string): Promise<string | null> {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+  }
+
   const { searchParams } = new URL(request.url)
   const city     = searchParams.get('city') ?? ''
   const cityCode = (searchParams.get('cityCode') ?? '').toUpperCase()

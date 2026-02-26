@@ -72,12 +72,12 @@ export default function ArtCanvasInner() {
       solarWindSpeed, trendDir, quakeProximity, quakeActivity,
     } = artParams
 
-    const isDaylight = (artParams as any).isDaylight ?? true
-    const sunElevation = (artParams as any).sunElevation ?? 0
-    const trendingKeyword = (artParams as any).trendingKeyword ?? 'RESONANCE'
-    const trendingIntensity = (artParams as any).trendingIntensity ?? 0.5
-    const trafficDensity = (artParams as any).trafficDensity ?? 0.3
-    const crowdDensity = (artParams as any).crowdDensity ?? 0.3
+    const isDaylight = artParams.isDaylight ?? true
+    const sunElevation = artParams.sunElevation ?? 0
+    const trendingKeyword = artParams.trendingKeyword ?? 'RESONANCE'
+    const trendingIntensity = artParams.trendingIntensity ?? 0.5
+    const trafficDensity = artParams.trafficDensity ?? 0.3
+    const crowdDensity = artParams.crowdDensity ?? 0.3
 
     // ── Shared color ────────────────────────────────────────────────────────
     const baseHue    = warmth * 38 + (1 - warmth) * 215

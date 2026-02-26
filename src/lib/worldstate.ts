@@ -104,6 +104,17 @@ export function seedToNumber(seed: string): number {
   return parseInt(seed.slice(0, 8), 16) / 0xffffffff
 }
 
+// ─── Mulberry32 PRNG — high quality seeded random, replaces sin-based PRNG ──
+export function createSeededRng(seed: number): () => number {
+  let s = seed | 0
+  return function() {
+    s = (s + 0x6D2B79F5) | 0
+    let t = Math.imul(s ^ (s >>> 15), 1 | s)
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
 // ─── Share URL builder (deterministic) ────────────────────────────────────────
 
 // Lookup tables for compact encoding
@@ -185,6 +196,28 @@ export function decodeSharePayload(encoded: string): WorldState | null {
       json = Buffer.from(encoded, 'base64url').toString('utf8')
     }
     const p: SharePayload = JSON.parse(json)
+
+    // Runtime validation — reject malformed share URLs
+    if (
+      typeof p.s !== 'string' || p.s.length < 10 ||
+      typeof p.t !== 'number' || typeof p.w !== 'number' ||
+      typeof p.kp !== 'number' || typeof p.vi !== 'number' ||
+      typeof p.ts !== 'number' || typeof p.mm !== 'number'
+    ) {
+      return null
+    }
+    // Clamp all values to valid ranges before use
+    p.t  = Math.max(-80, Math.min(60,  p.t))
+    p.w  = Math.max(0,   Math.min(300, p.w))
+    p.kp = Math.max(0,   Math.min(9,   p.kp))
+    p.vi = Math.max(0,   Math.min(100, p.vi))
+    p.ts = Math.max(-100, Math.min(100, p.ts))
+    p.mm = Math.max(0,   Math.min(10,  p.mm))
+    p.td = [0, 1, 2].includes(p.td) ? p.td : 2
+    p.at = (p.at >= 0 && p.at < 7) ? p.at : 0
+    if (typeof p.tk === 'string') {
+      p.tk = p.tk.replace(/[^A-Z0-9 ]/gi, '').slice(0, 20)
+    }
 
     const trendDir = TREND_DIRS[p.td] ?? 'neutral'
     const topTheme = THEMES[p.at] ?? 'culture'

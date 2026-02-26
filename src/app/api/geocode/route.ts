@@ -1,5 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// In-memory rate limiter: 20 req/min per IP
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>()
+const RATE_LIMIT = 20
+
+function checkRateLimit(ip: string): boolean {
+  const now = Date.now()
+  const entry = rateLimitMap.get(ip)
+  if (!entry || now > entry.resetAt) {
+    rateLimitMap.set(ip, { count: 1, resetAt: now + 60_000 })
+    return true
+  }
+  if (entry.count >= RATE_LIMIT) return false
+  entry.count++
+  return true
+}
+
 // Forward geocoding via Nominatim (OpenStreetMap)
 // GET /api/geocode?q=Madrid
 // Returns: Array<{ city, country, lat, lng, display }>
@@ -28,6 +44,11 @@ interface NominatimResult {
 const CITY_TYPES = new Set(['city', 'town', 'municipality', 'borough', 'suburb', 'quarter'])
 
 export async function GET(request: NextRequest) {
+  const ip = request.headers.get('x-forwarded-for')?.split(',')[0] ?? 'unknown'
+  if (!checkRateLimit(ip)) {
+    return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 })
+  }
+
   const q = request.nextUrl.searchParams.get('q')?.trim() ?? ''
   if (q.length < 2) return NextResponse.json([])
 
