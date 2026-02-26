@@ -153,8 +153,8 @@ void main(){
     float vertWave=snoise(vec3(pos.x*4., pos.z*4., uTime*.3+uSeed.y))*seismic;
     density+=max(0., vertWave)*1.2;
 
-    // Base ambient density so we always see something - MUCH HIGHER
-    density+=.4;
+    // Base ambient density so we always see something - EXTREMELY HIGH
+    density+=1.0;
 
     // POINT COLOR
     vec3 pointCol;
@@ -168,24 +168,24 @@ void main(){
       pointCol=mix(pointCol, vec3(1.,.25,.15), conflict*.5);
     }
 
-    // ACCUMULATE COLOR - MUCH MORE VISIBLE
-    float alpha=density*.8;
+    // ACCUMULATE COLOR - EXTREMELY VISIBLE
+    float alpha=density*2.0;
     col+=pointCol*alpha;
 
     // STEP FORWARD
     t+=.06; // smaller steps for more detail
   }
 
-  // FOG (humidity drives density) - LESS FOG
-  float fogDensity=.15+humidity*.3;
+  // FOG (humidity drives density) - MINIMAL FOG
+  float fogDensity=.05+humidity*.2;
   float fogFactor=exp(-t*fogDensity);
-  vec3 fogCol=mix(vec3(.03,.05,.12), vec3(.12,.10,.06), temp);
+  vec3 fogCol=mix(vec3(.08,.12,.20), vec3(.20,.18,.12), temp);
   col=mix(fogCol, col, fogFactor);
 
-  // BACKGROUND GRADIENT (more visible)
+  // BACKGROUND GRADIENT (much brighter)
   float bgGrad=smoothstep(-.5,1., p.y);
-  vec3 bgCol=mix(vec3(.02,.03,.08), vec3(.05,.08,.15), bgGrad);
-  col+=bgCol*.6;
+  vec3 bgCol=mix(vec3(.08,.10,.18), vec3(.15,.20,.30), bgGrad);
+  col+=bgCol*1.2;
 
   // VIGNETTE
   float vig=1.-dot(p*.5,p*.5);
