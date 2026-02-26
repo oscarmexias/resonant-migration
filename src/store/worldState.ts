@@ -4,6 +4,12 @@ import type { VisionType } from '@/types/vision'
 
 export type AppPhase = 'vision-select' | 'idle' | 'awakening' | 'requesting-location' | 'loading-signals' | 'generating' | 'output' | 'error'
 
+export interface MonumentData {
+  name: string
+  imageProxyUrl: string | null  // /api/monument-image?url=... (CORS-safe)
+  landmarkType: number          // 0-5 SDF archetype
+}
+
 interface WorldStateStore {
   phase: AppPhase
   setPhase: (phase: AppPhase) => void
@@ -43,6 +49,9 @@ interface WorldStateStore {
 
   selectedVision: VisionType | null
   setVision: (vision: VisionType | null) => void
+
+  monumentData: MonumentData | null
+  setMonumentData: (data: MonumentData | null) => void
 
   reset: () => void
 }
@@ -99,6 +108,9 @@ export const useWorldStateStore = create<WorldStateStore>((set) => ({
   selectedVision: null,
   setVision: (selectedVision) => set({ selectedVision }),
 
+  monumentData: null,
+  setMonumentData: (monumentData) => set({ monumentData }),
+
   reset: () =>
     set({
       phase: 'vision-select',
@@ -108,5 +120,6 @@ export const useWorldStateStore = create<WorldStateStore>((set) => ({
       error: null,
       locationDenied: false,
       selectedVision: null,
+      monumentData: null,
     }),
 }))
