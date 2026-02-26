@@ -19,6 +19,8 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Interaction uniforms (Brutalist protagonist: click position)
+uniform vec2 uClickPos; // 0-1 normalized click position
 
 varying vec2 vUv;
 
@@ -65,12 +67,16 @@ void main(){
   float ca=cos(rotAngle), sa=sin(rotAngle);
   vec2 pRot=vec2(ca*p.x-sa*p.y, sa*p.x+ca*p.y);
 
-  // POSITION OFFSET (time-based, snapped to grid)
-  float gridSnap=.2;
-  vec2 offset=vec2(
-    floor(sin(uTime*.4+uSeed.x)/gridSnap)*gridSnap,
-    floor(cos(uTime*.3+uSeed.y)/gridSnap)*gridSnap
-  )*maxSig*.3;
+  // POSITION OFFSET (CLICK POSITION determines shape placement)
+  // Convert click from 0-1 to -1 to 1 screen space
+  vec2 clickWorld=(uClickPos-.5)*2.;
+  clickWorld.x*=uResolution.x/uResolution.y;
+  // If no click yet (0,0), use time-based offset as fallback
+  bool hasClick=length(uClickPos)>.01;
+  vec2 offset=hasClick ? -clickWorld : vec2(
+    sin(uTime*.4+uSeed.x),
+    cos(uTime*.3+uSeed.y)
+  )*.3*maxSig;
   vec2 pFinal=pRot/scale+offset;
 
   // SHAPE SDF

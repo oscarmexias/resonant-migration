@@ -19,6 +19,10 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Interaction uniforms (Volumetric protagonist: gyroscope)
+uniform float uGyroAlpha; // 0-360
+uniform float uGyroBeta;  // -180 to 180
+uniform float uGyroGamma; // -90 to 90
 
 varying vec2 vUv;
 
@@ -90,15 +94,29 @@ void main(){
   float conflict=clamp((-uSocial.x+100.)/200.,0.,1.);
   float humidity=clamp(uAtmosphere.z/100.,0.,1.);
 
-  // CAMERA ROTATION (based on time + wind direction)
-  float camAngle=uTime*.12+windDir;
+  // CAMERA ROTATION (based on time + wind direction + GYROSCOPE CONTROL)
+  // Convert gyro angles to radians and use them to control camera
+  float gyroAlphaRad=uGyroAlpha*3.14159/180.;
+  float gyroBetaRad=uGyroBeta*3.14159/180.;
+  float gyroGammaRad=uGyroGamma*3.14159/180.;
+
+  // Base rotation + gyro alpha controls horizontal rotation
+  float camAngle=uTime*.12+windDir+gyroAlphaRad*.5;
   float camDist=2.5;
-  vec3 ro=vec3(cos(camAngle)*camDist, 1., sin(camAngle)*camDist);
+  // Gyro beta controls vertical position (tilt up/down)
+  float camHeight=1.+gyroBetaRad*.3;
+  vec3 ro=vec3(cos(camAngle)*camDist, camHeight, sin(camAngle)*camDist);
   vec3 lookAt=vec3(0.,0.,0.);
   vec3 fwd=normalize(lookAt-ro);
   vec3 right=normalize(cross(vec3(0.,1.,0.),fwd));
   vec3 up=cross(fwd,right);
+  // Gyro gamma adds roll/twist to the view direction
   vec3 rd=normalize(fwd+p.x*right+p.y*up);
+  // Apply gamma roll rotation to rd
+  float cosG=cos(gyroGammaRad*.2);
+  float sinG=sin(gyroGammaRad*.2);
+  vec3 rdRolled=vec3(rd.x*cosG-rd.y*sinG, rd.x*sinG+rd.y*cosG, rd.z);
+  rd=rdRolled;
 
   // RAYMARCH SETTINGS
   int maxSteps=48; // balanced for performance
@@ -116,45 +134,46 @@ void main(){
     // POINT DENSITY via 3D noise
     float density=0.;
 
-    // Layer 1: General scatter (volat drives chaos)
-    float scatter=snoise(pos*2.+vec3(uSeed.x*5.,uSeed.y*3.,uTime*.2))*volat;
-    density+=max(0., scatter)*.5;
+    // Layer 1: General scatter (volat drives chaos) - INCREASED
+    float scatter=snoise(pos*2.+vec3(uSeed.x*5.,uSeed.y*3.,uTime*.2));
+    density+=max(0., scatter)*1.5*max(volat, .3);
 
-    // Layer 2: Upper volume (kp drives density)
-    if(pos.y>.5){
-      density+=kp*.3*smoothstep(.5,1.5,pos.y);
+    // Layer 2: Upper volume (kp drives density) - INCREASED
+    if(pos.y>.2){
+      density+=kp*1.2*smoothstep(.2,1.8,pos.y);
     }
 
-    // Layer 3: Monument dense cluster at center
+    // Layer 3: Monument dense cluster at center - INCREASED + LARGER
     float distToCenter=length(pos);
-    if(distToCenter<.8){
-      density+=.6*smoothstep(.8,.2,distToCenter);
+    if(distToCenter<1.2){
+      density+=2.0*smoothstep(1.2,.0,distToCenter);
     }
 
-    // Layer 4: Seismic vertical displacement (creates vertical streaks)
+    // Layer 4: Seismic vertical displacement - INCREASED
     float vertWave=snoise(vec3(pos.x*4., pos.z*4., uTime*.3+uSeed.y))*seismic;
-    density+=max(0., vertWave)*.4;
+    density+=max(0., vertWave)*1.2;
+
+    // Base ambient density so we always see something
+    density+=.15;
 
     // POINT COLOR
     vec3 pointCol;
-    if(distToCenter<.8){
-      // Monument core: golden
-      pointCol=vec3(.92,.76,.48);
+    if(distToCenter<1.2){
+      // Monument core: golden bright
+      pointCol=vec3(1.,.86,.48);
     } else {
       // Data signals: temp gradient
-      pointCol=mix(vec3(.05,.28,.80), vec3(.95,.52,.12), temp);
+      pointCol=mix(vec3(.15,.48,1.), vec3(1.,.62,.22), temp);
       // Conflict tint
-      pointCol=mix(pointCol, vec3(1.,.15,.05), conflict*.5);
+      pointCol=mix(pointCol, vec3(1.,.25,.15), conflict*.5);
     }
 
-    // ACCUMULATE COLOR
-    if(density>.1){
-      float alpha=density*.3;
-      col+=pointCol*alpha;
-    }
+    // ACCUMULATE COLOR - more visible
+    float alpha=density*.25;
+    col+=pointCol*alpha;
 
     // STEP FORWARD
-    t+=.08; // step size
+    t+=.06; // smaller steps for more detail
   }
 
   // FOG (humidity drives density)

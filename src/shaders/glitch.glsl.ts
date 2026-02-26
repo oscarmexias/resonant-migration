@@ -19,6 +19,8 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Interaction uniforms (Glitch protagonist: shake/motion)
+uniform float uShakeIntensity;
 
 varying vec2 vUv;
 
@@ -145,8 +147,11 @@ void main(){
   float volat   =clamp(uEconomy.x/100.,0.,1.);
   float conflict=clamp((-uSocial.x+100.)/200.,0.,1.);
 
-  // STRESS AMOUNT (combines kp, volat, conflict)
+  // STRESS AMOUNT (combines kp, volat, conflict + SHAKE TRIGGER)
   float stress=(kp+volat+conflict)/3.;
+  // SHAKE triggers immediate corruption surge
+  float shakeBoost=uShakeIntensity*uShakeIntensity*.6;
+  stress=min(stress+shakeBoost, 1.);
 
   // COLLAPSE CYCLE (5 second cycle, stress makes it faster)
   float cycleSpeed=1.+stress*2.;
@@ -159,21 +164,27 @@ void main(){
   vec2 p=(uv-.5)*2.;
   p.x*=uResolution.x/uResolution.y;
 
-  // BLOCK DISPLACEMENT (UV grid distortion in chunks)
+  // BLOCK DISPLACEMENT (UV grid distortion in chunks + SHAKE CHAOS)
   float blockSize=mix(8., 20., corr);
   vec2 blockID=floor(uv*blockSize);
   vec2 blockOffset=vec2(
     snoise(blockID+vec2(uTime*.3+uSeed.x,0.)),
     snoise(blockID+vec2(0.,uTime*.3+uSeed.y))
   )*corr*.1;
+  // SHAKE adds violent displacement bursts
+  blockOffset+=vec2(
+    snoise(blockID+vec2(uTime*15.,0.))*uShakeIntensity*.15,
+    snoise(blockID+vec2(0.,uTime*18.))*uShakeIntensity*.15
+  );
   vec2 glitchUV=uv+blockOffset;
   vec2 glitchP=(glitchUV-.5)*2.;
   glitchP.x*=uResolution.x/uResolution.y;
 
-  // RGB CHANNEL SEPARATION (walk away from each other)
-  vec2 rOff=vec2(-corr*.03, 0.);
+  // RGB CHANNEL SEPARATION (walk away from each other + SHAKE SPLIT)
+  float shakeSplit=uShakeIntensity*.04;
+  vec2 rOff=vec2(-corr*.03-shakeSplit, 0.);
   vec2 gOff=vec2(0., 0.);
-  vec2 bOff=vec2(corr*.03, 0.);
+  vec2 bOff=vec2(corr*.03+shakeSplit, 0.);
 
   // BACKGROUND FBM (per channel)
   float lat=uCity.x;

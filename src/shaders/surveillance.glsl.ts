@@ -19,6 +19,9 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Interaction uniforms (Surveillance protagonist: microphone)
+uniform float uMicLevel;
+uniform float uMicSeed;
 
 varying vec2 vUv;
 
@@ -127,11 +130,12 @@ void main(){
   vec2 blockUV=floor(uv*blockSize)/blockSize;
   vec2 pixUV=mix(uv, blockUV, volat*.7);
 
-  // RGB CHROMATIC ABERRATION (conflict drives offset)
-  float offset=conflict*.012+seismic*.006;
-  vec2 rUV=pixUV+vec2(-offset,0.);
+  // RGB CHROMATIC ABERRATION (conflict drives offset + MIC INTERFERENCE)
+  float micGlitch=uMicLevel*uMicLevel*.02; // mic input adds glitch
+  float offset=conflict*.012+seismic*.006+micGlitch;
+  vec2 rUV=pixUV+vec2(-offset,snoise(vec2(uTime*10.+uMicSeed,0.))*micGlitch);
   vec2 gUV=pixUV;
-  vec2 bUV=pixUV+vec2(offset,0.);
+  vec2 bUV=pixUV+vec2(offset,snoise(vec2(0.,uTime*12.+uMicSeed))*micGlitch);
 
   // ASPECT-CORRECTED COORDS
   vec2 p=(pixUV-.5)*2.;
@@ -195,13 +199,15 @@ void main(){
   g*=scan*.8+.2;
   b*=scan*.8+.2;
 
-  // GRAIN (thermal camera noise)
-  float grain=snoise(pixUV*uResolution*.5+vec2(uTime*.2))*kp*.08;
+  // GRAIN (thermal camera noise + MIC STATIC)
+  float micStatic=uMicLevel*.12; // mic adds static noise
+  float grain=snoise(pixUV*uResolution*.5+vec2(uTime*.2+uMicSeed*100.))*kp*.08;
+  grain+=snoise(pixUV*uResolution*2.+vec2(uTime*5.+uMicSeed*50.))*micStatic;
   r+=grain; g+=grain; b+=grain;
 
-  // FLICKER (high kp = unstable feed)
-  float flicker=snoise(vec2(uTime*8.+uSeed.x,0.))*.5+.5;
-  float flickerAmt=kp*kp*.15*flicker;
+  // FLICKER (high kp = unstable feed + MIC OVERLOAD)
+  float flicker=snoise(vec2(uTime*8.+uSeed.x+uMicSeed*20.,0.))*.5+.5;
+  float flickerAmt=kp*kp*.15*flicker + uMicLevel*uMicLevel*.2; // mic overload causes flicker
   r*=1.-flickerAmt; g*=1.-flickerAmt; b*=1.-flickerAmt;
 
   // TIMESTAMP OVERLAY (fake coordinate readout in corner)

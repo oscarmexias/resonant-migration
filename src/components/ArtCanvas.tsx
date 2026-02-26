@@ -8,15 +8,20 @@
 import dynamic from 'next/dynamic'
 import { useState, useEffect } from 'react'
 import { detectDeviceTier, type DeviceTier } from '@/lib/deviceTier'
+import type { InteractionState } from '@/lib/useVisionInteractions'
 
 const ArtCanvasWebGL = dynamic(() => import('./ArtCanvasWebGL'), { ssr: false })
 
-export default function ArtCanvas() {
+interface Props {
+  interactionState: InteractionState
+}
+
+export default function ArtCanvas({ interactionState }: Props) {
   const [tier, setTier] = useState<DeviceTier>('mobile') // safe SSR default
 
   useEffect(() => {
     setTier(detectDeviceTier())
   }, [])
 
-  return <ArtCanvasWebGL tier={tier} />
+  return <ArtCanvasWebGL tier={tier} interactionState={interactionState} />
 }

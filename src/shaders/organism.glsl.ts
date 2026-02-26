@@ -19,6 +19,8 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Interaction uniforms (Organism protagonist: microphone)
+uniform float uMicLevel;
 
 varying vec2 vUv;
 
@@ -84,15 +86,16 @@ void main(){
   float conflict=clamp((-uSocial.x+100.)/200.,0.,1.);
   float humidity=clamp(uAtmosphere.z/100.,0.,1.);
 
-  // PULSE RATE (kp drives heartbeat speed)
-  float pulseRate=1.5+kp*3.; // 1.5-4.5 Hz
+  // PULSE RATE (kp drives heartbeat speed + MIC LEVEL accelerates it)
+  float micBoost=uMicLevel*uMicLevel*4.; // mic input accelerates pulse dramatically
+  float pulseRate=1.5+kp*3.+micBoost; // 1.5-8.5 Hz (mic can push it into frantic territory)
 
   // VORONOI CELLS (biological cells)
   vec2 vo=voronoi(p*3.5, pulseRate);
   float vd=vo.x, vid=vo.y;
 
-  // CELL PULSE (independent per cell)
-  float cellPulse=sin(uTime*pulseRate+vid*6.28)*.5+.5;
+  // CELL PULSE (independent per cell + MIC makes it erratic)
+  float cellPulse=sin(uTime*pulseRate+vid*6.28+uMicLevel*10.)*.5+.5;
 
   // TISSUE TEXTURE (organic, reaction-diffusion style via FBM)
   vec2 texUV=p*8.+vec2(vid*7.3,vid*4.1)+vec2(uTime*.3,0.);
@@ -129,8 +132,9 @@ void main(){
   // COMPOSITE
   vec3 col=mix(tissueCol, membraneCol, edge*.7);
 
-  // VEINS (connecting cells — perlin worm paths)
+  // VEINS (connecting cells — perlin worm paths + MIC makes them throb)
   float veinDist=100.;
+  float micThrob=uMicLevel*.3; // mic makes veins swell
   // Worm 1 (horizontal-ish)
   vec2 worm1Start=vec2(-1., sin(uTime*.5+uSeed.x)*.5);
   vec2 worm1End  =vec2( 1., sin(uTime*.5+uSeed.y+1.2)*.5);
@@ -143,8 +147,8 @@ void main(){
   float worm2=sdSegment(p, worm2Start, worm2End);
   veinDist=min(veinDist, worm2);
 
-  // Vein width (pulsing)
-  float veinWidth=.015+cellPulse*.008;
+  // Vein width (pulsing + MIC swelling)
+  float veinWidth=.015+cellPulse*.008+micThrob*.02;
   float vein=1.-smoothstep(0., veinWidth, veinDist);
 
   vec3 veinCol=mix(vec3(.3,.05,.05), vec3(.8,.1,.1), conflict);

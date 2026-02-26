@@ -12,6 +12,7 @@ import * as organism from '@/shaders/organism.glsl'
 import { seedToNumber } from '@/lib/worldstate'
 import { getLandmarkType } from '@/lib/monumentData'
 import type { VisionType } from '@/types/vision'
+import type { InteractionState } from '@/lib/useVisionInteractions'
 
 const SHADER_MAP = {
   surveillance,
@@ -23,9 +24,10 @@ const SHADER_MAP = {
 
 interface Props {
   tier: DeviceTier
+  interactionState: InteractionState
 }
 
-export default function ArtCanvasWebGL({ tier }: Props) {
+export default function ArtCanvasWebGL({ tier, interactionState }: Props) {
   const mountRef     = useRef<HTMLDivElement>(null)
   const worldState   = useWorldStateStore((s) => s.worldState)
   const artParams    = useWorldStateStore((s) => s.artParams)
@@ -89,6 +91,14 @@ export default function ArtCanvasWebGL({ tier }: Props) {
       )},
       // Arquetipo de monumento SDF 0-5 — identidad visual de la ciudad
       uLandmarkType: { value: getLandmarkType(ws.location.cityCode, seedToNumber(ws.seed)) },
+      // Interaction uniforms — vision-specific sensor data
+      uMicLevel: { value: interactionState.micLevel },
+      uMicSeed: { value: interactionState.micSeed },
+      uShakeIntensity: { value: interactionState.shakeIntensity },
+      uGyroAlpha: { value: interactionState.gyroAlpha },
+      uGyroBeta: { value: interactionState.gyroBeta },
+      uGyroGamma: { value: interactionState.gyroGamma },
+      uClickPos: { value: new THREE.Vector2(interactionState.clickX, interactionState.clickY) },
     }
 
     const material = new THREE.ShaderMaterial({
@@ -108,6 +118,14 @@ export default function ArtCanvasWebGL({ tier }: Props) {
     const animate = () => {
       if (document.hidden) { animId = requestAnimationFrame(animate); return }
       uniforms.uTime.value = (performance.now() - startTime) / 1000
+      // Update interaction uniforms
+      uniforms.uMicLevel.value = interactionState.micLevel
+      uniforms.uMicSeed.value = interactionState.micSeed
+      uniforms.uShakeIntensity.value = interactionState.shakeIntensity
+      uniforms.uGyroAlpha.value = interactionState.gyroAlpha
+      uniforms.uGyroBeta.value = interactionState.gyroBeta
+      uniforms.uGyroGamma.value = interactionState.gyroGamma
+      ;(uniforms.uClickPos.value as THREE.Vector2).set(interactionState.clickX, interactionState.clickY)
       renderer.render(scene, camera)
       animId = requestAnimationFrame(animate)
     }
@@ -129,7 +147,7 @@ export default function ArtCanvasWebGL({ tier }: Props) {
       renderer.dispose()
       if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
     }
-  }, [worldState, artParams, tier, selectedVision])
+  }, [worldState, artParams, tier, selectedVision, interactionState])
 
   return (
     <div

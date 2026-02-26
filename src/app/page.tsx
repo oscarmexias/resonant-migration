@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic'
 import { useWorldStateStore } from '@/store/worldState'
 import { fetchWorldState, deriveArtParams, decodeSharePayload } from '@/lib/worldstate'
 import { useIsMobile } from '@/lib/useIsMobile'
-import { useInteractions } from '@/lib/useInteractions'
+import { useVisionInteractions } from '@/lib/useVisionInteractions'
 import { VISIONS, type VisionType } from '@/types/vision'
 import ElOjo from '@/components/ElOjo'
 import SignalLoader from '@/components/SignalLoader'
@@ -159,8 +159,8 @@ export default function Home() {
     setPhase('idle')
   }, [setVision, setPhase])
 
-  // Interactions (click, mic, shake) active during output phase
-  const { handleClick, isShaking, micLevel } = useInteractions(phase === 'output')
+  // Interactions (click, mic, shake) active during output phase - vision-specific
+  const [interactionState, handleClick] = useVisionInteractions(selectedVision, phase === 'output')
 
   const showVisionSelector = phase === 'vision-select'
   const showCanvas   = phase === 'generating' || phase === 'output'
@@ -196,7 +196,7 @@ export default function Home() {
         <div
           className="art-canvas-container"
         >
-          <ArtCanvas />
+          <ArtCanvas interactionState={interactionState} />
         </div>
       )}
 
