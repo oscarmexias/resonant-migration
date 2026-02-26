@@ -145,7 +145,7 @@ vec2 voronoi(vec2 p, float t){
       vec2 b=vec2(float(x),float(y));
       vec2 seed=ip+b;
       vec2 o=hash22(seed+uSeed.x*13.7);
-      o+=.09*sin(t*.22+o*6.28+uSeed.y*5.1); // deriva lenta
+      o+=.18*sin(t*.55+o*6.28+uSeed.y*5.1); // deriva más visible (2x amplitude, 2.5x speed)
       vec2 r=b-fp+o;
       float d=dot(r,r);
       if(d<md){ md=d; id=fract(seed.x*137.1+seed.y*251.3+uSeed.x*19.3); }
@@ -189,17 +189,24 @@ void main(){
   vec3 bB=vec3(.55,.38,.00)*iT+vec3(.62,.22,.02)*iD
          +vec3(.08,.22,.12)*iP+vec3(.00,.22,.32)*iA;
 
-  // Velocidad temporal por bioma + hora del día
+  // Velocidad temporal por bioma + hora del día (FASTER — 4x speed)
   float dayF=isDaylit*clamp(sunElev*.6+.55,0.,1.);
   float spd=mix(1.,.35,absN)*mix(.55,1.,dayF);
-  float sl=uTime*.005*spd, md=uTime*.028*spd, ft=uTime*.17*spd;
+  float sl=uTime*.020*spd, md=uTime*.112*spd, ft=uTime*.68*spd;
 
   // ===================================================================
   // LAYER 0 — FBM Domain Warp (fondo atmosférico)
   // ===================================================================
   vec2 co=vec2(sA*4.2,sB*3.7); // offset único de ciudad
-  vec2 wv=vec2(cos(windDir),sin(windDir))*windSpd*.15;
+  vec2 wv=vec2(cos(windDir),sin(windDir))*windSpd*.28; // 2x stronger wind drift
   float ws=mix(.3,1.5,max(kp,volat))+conflict*.4;
+
+  // Wind flow streaks (dirección del viento visible)
+  float windFlow=0.;
+  vec2 windUV=p*4.+vec2(sl*3.,md*1.5);
+  windUV=vec2(windUV.x*cos(windDir)-windUV.y*sin(windDir),
+              windUV.x*sin(windDir)+windUV.y*cos(windDir));
+  windFlow=smoothstep(.6,1.,abs(snoise(windUV)))*windSpd*.12;
 
   vec2 q=vec2(fbm5(p+co+vec2(sl,md)+wv),
               fbm5(p+co+vec2(md*hemi*.8,-sl)));
@@ -211,19 +218,21 @@ void main(){
   vec3 bgCol=mix(bA,bB,temp);
   bgCol+=mix(bA,bB,temp+bg1*.5)*.5;
   bgCol+=vec3(bg2*.10*kp,bg2*.05,bg2*.13*(1.-temp));
+  // Wind flow overlay (subtle brightness streaks)
+  bgCol+=vec3(windFlow*.8,windFlow*.6,windFlow*.4);
   // Noche dramática
   bgCol=mix(bgCol*.25+vec3(0.,0.,.06),bgCol,dayF);
   bgCol=mix(bgCol,bgCol*vec3(1.4,.7,.6),conflict*.45);
   bgCol*=mix(.72,1.22,humidity);
 
-  // Aurora
+  // Aurora (con ondulación más dramática)
   float aurStr=absN*absN;
   float aurZ=smoothstep(.5,1.,uv.y);
-  float aurW=fbm3(vec2(p.x*3.+sl*2.+sA,md));
-  float aurH=snoise(vec2(p.x*2.+sl+sB,kp*4.))*.5+.5;
+  float aurW=fbm3(vec2(p.x*3.+sl*4.+sA,md*2.)); // 2x faster wave
+  float aurH=snoise(vec2(p.x*2.+sl*1.8+sB,kp*4.+md))*.5+.5; // animated hue shift
   vec3 aurN=mix(vec3(0.,.80,.35),vec3(.35,0.,.80),aurH);
   vec3 aurS=mix(vec3(0.,.70,.80),vec3(.80,0.,.55),aurH);
-  bgCol+=mix(aurS,aurN,step(0.,hemi))*aurZ*kp*aurStr*.8*(aurW*.5+.5);
+  bgCol+=mix(aurS,aurN,step(0.,hemi))*aurZ*kp*aurStr*1.2*(aurW*.5+.5); // +50% brightness
 
   // ===================================================================
   // LAYER 1 — Voronoi Orgánico (señales de datos por celda)
@@ -259,10 +268,10 @@ void main(){
   }
 
   // Textura biológica interna (imita reaction-diffusion sin simulación)
-  vec2 btp=p*11.+vec2(vid*7.3,vid*4.1)+vec2(sl*.6,0.);
+  vec2 btp=p*11.+vec2(vid*7.3,vid*4.1)+vec2(sl*1.4,md*.5); // drift XY
   float bio=fbm3(btp)*.5+.5;
-  // Latido de celda — cada señal pulsa a su ritmo
-  float pulse=sin(uTime*(.4+sigVal*1.3)+vid*6.28)*.5+.5;
+  // Latido de celda — cada señal pulsa a su ritmo (faster, more visible)
+  float pulse=sin(uTime*(.8+sigVal*2.2)+vid*6.28)*.5+.5;
 
   vec3 cellCol=sigCol*mix(.45,1.35,bio);
   cellCol*=mix(.65,1.25,pulse*max(sigVal,.15));
@@ -280,13 +289,21 @@ void main(){
   // ===================================================================
   // LAYER 2 — Monumento SDF
   // ===================================================================
-  // El monumento "respira" con la actividad global
+  // El monumento "respira" con la actividad global (stronger pulse)
   float breathe=kp*.7+seismic*.5+volat*.3;
   float lscale=.72; // escala del monumento en canvas
   vec2  lp=p/lscale;
   lp.y+=.08; // centrado ligeramente arriba del centro
-  // Pulso de tamaño leve
-  lp/=(1.+breathe*.012);
+  // Pulso de tamaño + rotación sutil en actividad alta
+  float breathAnim=sin(uTime*.65+breathe*2.)*.5+.5;
+  lp/=(1.+breathe*.024*breathAnim); // 2x stronger pulse
+  // Rotación leve si hay actividad extrema (kp + volat + conflict)
+  float rotAmt=(kp+volat+conflict)/3.;
+  if(rotAmt>.45){
+    float ang=sin(uTime*.18)*rotAmt*.08; // max ±4.5° rotation
+    float ca=cos(ang), sa=sin(ang);
+    lp=vec2(ca*lp.x-sa*lp.y, sa*lp.x+ca*lp.y);
+  }
 
   float lSDF=landmarkSDF(lp, uLandmarkType);
 
@@ -309,17 +326,16 @@ void main(){
   col+=lCol*(lFill*.90+lAura*.60+lHalo+flick*lFill);
 
   // ===================================================================
-  // Anillos sísmicos desde el monumento
+  // Anillos sísmicos desde el monumento (ALWAYS visible, intensity varies)
   // ===================================================================
-  if(seismic>.04){
-    float rw=.007+seismic*.013;
-    float rA=mod(uTime*(.42+seismic*.38),1.4);
-    float gA=exp(-abs(abs(length(p)-rA)-rw)*85.)*(1.-rA/1.4)*seismic*.9;
-    col+=vec3(gA*1.4,gA*.22,0.);
-    float rB=mod(uTime*(.42+seismic*.38)+.55,1.4);
-    float gB=exp(-abs(abs(length(p)-rB)-rw*.7)*85.)*(1.-rB/1.4)*seismic*.5;
-    col+=vec3(gB*.9,gB*.11,0.);
-  }
+  float ringIntensity=max(seismic, .08); // minimum .08 so always visible
+  float rw=.007+ringIntensity*.013;
+  float rA=mod(uTime*(.68+ringIntensity*.62),1.6); // faster rings
+  float gA=exp(-abs(abs(length(p)-rA)-rw)*85.)*(1.-rA/1.6)*ringIntensity*.9;
+  col+=vec3(gA*1.4,gA*.22,0.);
+  float rB=mod(uTime*(.68+ringIntensity*.62)+.62,1.6);
+  float gB=exp(-abs(abs(length(p)-rB)-rw*.7)*85.)*(1.-rB/1.6)*ringIntensity*.5;
+  col+=vec3(gB*.9,gB*.11,0.);
 
   // ===================================================================
   // Post-processing
