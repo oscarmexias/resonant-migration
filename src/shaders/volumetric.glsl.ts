@@ -19,6 +19,9 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Monument photo substrate
+uniform sampler2D uMonumentTex;
+uniform float     uPhotoReady;
 // Interaction uniforms (Volumetric protagonist: gyroscope)
 uniform float uGyroAlpha; // 0-360
 uniform float uGyroBeta;  // -180 to 180
@@ -187,6 +190,15 @@ void main(){
   float bgGrad=smoothstep(-.5,1., p.y);
   vec3 bgCol=mix(vec3(.08,.10,.18), vec3(.15,.20,.30), bgGrad);
   col+=bgCol*0.4;
+
+  // MONUMENT PHOTO — ghostly presence visible through the point cloud
+  if(uPhotoReady>0.5){
+    vec3 photo=texture2D(uMonumentTex,vUv).rgb;
+    float luma=dot(photo,vec3(0.299,0.587,0.114));
+    // Warm/cool ghost tinted by temperature — landmark shimmers in the data fog
+    vec3 ghost=mix(vec3(luma),photo,0.35)*mix(vec3(0.9,0.82,0.65),vec3(0.6,0.80,1.0),temp);
+    col+=ghost*0.30;
+  }
 
   // VIGNETTE
   float vig=1.-dot(p*.5,p*.5);

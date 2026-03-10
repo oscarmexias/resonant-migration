@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import type { WorldState, SignalState, ArtParams } from '@/types/worldstate'
 import type { VisionType } from '@/types/vision'
 
-export type AppPhase = 'vision-select' | 'idle' | 'awakening' | 'requesting-location' | 'loading-signals' | 'generating' | 'output' | 'error'
+export type AppPhase = 'vision-select' | 'idle' | 'awakening' | 'requesting-location' | 'loading-signals' | 'monument-reveal' | 'generating' | 'output' | 'error'
 
 export interface MonumentData {
   name: string

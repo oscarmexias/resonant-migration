@@ -71,6 +71,7 @@ export default function CitySearch() {
     citySearchOpen, setCitySearchOpen,
     monumentModeOn, setMonumentModeOn,
     immersiveMode,
+    selectedVision, setMonumentData,
   } = useWorldStateStore()
 
   // ── Open / close ────────────────────────────────────────────────────────────
@@ -159,20 +160,44 @@ export default function CitySearch() {
 
   const navigateTo = useCallback(async (result: GeoResult) => {
     close()
+    // Clear stale monument so the art doesn't show the previous city's photo
+    setMonumentData(null)
     setPhase('loading-signals')
     setLocation({ lat: result.lat, lng: result.lng })
     try {
       const ws = await fetchWorldState(result.lat, result.lng)
       setWorldState(ws)
       setArtParams(deriveArtParams(ws))
-      setPhase('generating')
-      await new Promise((r) => setTimeout(r, 900))
-      setPhase('output')
+
+      // Fetch monument for the new city (non-blocking — reveal works with or without photo)
+      const cityCode = ws.location.cityCode ?? ''
+      const cityName = ws.location.city ?? ''
+      if (cityCode || cityName) {
+        fetch(
+          `/api/monument?cityCode=${encodeURIComponent(cityCode)}&city=${encodeURIComponent(cityName)}`,
+        )
+          .then((r) => r.json())
+          .then((m: { name?: string | null; imageUrl?: string | null; landmarkType?: number | null }) => {
+            if (m?.name) {
+              setMonumentData({
+                name: m.name,
+                imageProxyUrl: m.imageUrl
+                  ? `/api/monument-image?url=${encodeURIComponent(m.imageUrl)}`
+                  : null,
+                landmarkType: m.landmarkType ?? 0,
+              })
+            }
+          })
+          .catch(() => {})
+      }
+
+      // Route through monument-reveal; if vision already selected skip vision-select → go to output
+      setPhase('monument-reveal')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
       setPhase('error')
     }
-  }, [close, setPhase, setLocation, setWorldState, setArtParams, setError])
+  }, [close, setPhase, setLocation, setWorldState, setArtParams, setError, setMonumentData])
 
   // ── Keyboard navigation ──────────────────────────────────────────────────────
 

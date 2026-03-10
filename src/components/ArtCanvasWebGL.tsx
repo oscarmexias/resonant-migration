@@ -9,6 +9,8 @@ import * as glitch from '@/shaders/glitch.glsl'
 import * as volumetric from '@/shaders/volumetric.glsl'
 import * as brutalist from '@/shaders/brutalist.glsl'
 import * as organism from '@/shaders/organism.glsl'
+import * as fragmento from '@/shaders/fragmento.glsl'
+import * as testigo from '@/shaders/testigo.glsl'
 import { seedToNumber } from '@/lib/worldstate'
 import { getLandmarkType } from '@/lib/monumentData'
 import type { VisionType } from '@/types/vision'
@@ -20,6 +22,8 @@ const SHADER_MAP = {
   volumetric,
   brutalist,
   organism,
+  fragmento,
+  testigo,
 }
 
 interface Props {
@@ -27,11 +31,19 @@ interface Props {
   interactionState: InteractionState
 }
 
+// 1×1 black texture — used as placeholder when monument photo isn't ready
+function createBlackTexture(): THREE.DataTexture {
+  const tex = new THREE.DataTexture(new Uint8Array([0, 0, 0, 255]), 1, 1, THREE.RGBAFormat)
+  tex.needsUpdate = true
+  return tex
+}
+
 export default function ArtCanvasWebGL({ tier, interactionState }: Props) {
-  const mountRef     = useRef<HTMLDivElement>(null)
-  const worldState   = useWorldStateStore((s) => s.worldState)
-  const artParams    = useWorldStateStore((s) => s.artParams)
+  const mountRef       = useRef<HTMLDivElement>(null)
+  const worldState     = useWorldStateStore((s) => s.worldState)
+  const artParams      = useWorldStateStore((s) => s.artParams)
   const selectedVision = useWorldStateStore((s) => s.selectedVision)
+  const monumentData   = useWorldStateStore((s) => s.monumentData)
 
   useEffect(() => {
     const mount = mountRef.current
@@ -64,6 +76,7 @@ export default function ArtCanvasWebGL({ tier, interactionState }: Props) {
       uAtmosphere: { value: new THREE.Vector4(
         ws.clima.temp, ws.clima.wind, ws.clima.humidity, ws.clima.windDir,
       )},
+      uPrecipitation: { value: ws.clima.precipitation ?? 0 },
       uCosmos: { value: new THREE.Vector4(
         ws.cosmos.kpIndex,
         ws.cosmos.solarWind,
@@ -91,6 +104,9 @@ export default function ArtCanvasWebGL({ tier, interactionState }: Props) {
       )},
       // Arquetipo de monumento SDF 0-5 — identidad visual de la ciudad
       uLandmarkType: { value: getLandmarkType(ws.location.cityCode, seedToNumber(ws.seed)) },
+      // Monument photo texture — real landmark photo as art substrate
+      uMonumentTex: { value: createBlackTexture() },
+      uPhotoReady:  { value: 0 },
       // Interaction uniforms — vision-specific sensor data
       uMicLevel: { value: interactionState.micLevel },
       uMicSeed: { value: interactionState.micSeed },
@@ -110,6 +126,26 @@ export default function ArtCanvasWebGL({ tier, interactionState }: Props) {
     const mesh = new THREE.Mesh(geometry, material)
     mesh.frustumCulled = false
     scene.add(mesh)
+
+    // ── Monument photo texture (async — non-blocking) ──────────────────────────
+    let monumentTex: THREE.Texture | null = null
+    const photoUrl = monumentData?.imageProxyUrl ?? null
+    if (photoUrl) {
+      const loader = new THREE.TextureLoader()
+      loader.load(
+        photoUrl,
+        (tex) => {
+          // Dispose the placeholder black texture first
+          const placeholder = material.uniforms['uMonumentTex'].value as THREE.Texture
+          placeholder.dispose()
+          monumentTex = tex
+          material.uniforms['uMonumentTex'].value = tex
+          material.uniforms['uPhotoReady'].value   = 1.0
+        },
+        undefined,
+        () => { /* silently skip — shaders gracefully degrade with uPhotoReady=0 */ },
+      )
+    }
 
     // ── Animation loop ─────────────────────────────────────────────────────────
     let animId: number
@@ -144,10 +180,11 @@ export default function ArtCanvasWebGL({ tier, interactionState }: Props) {
       window.removeEventListener('resize', onResize)
       geometry.dispose()
       material.dispose()
+      if (monumentTex) monumentTex.dispose()
       renderer.dispose()
       if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement)
     }
-  }, [worldState, artParams, tier, selectedVision, interactionState])
+  }, [worldState, artParams, tier, selectedVision, interactionState, monumentData])
 
   return (
     <div

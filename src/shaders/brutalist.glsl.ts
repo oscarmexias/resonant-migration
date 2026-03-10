@@ -19,6 +19,9 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Monument photo substrate
+uniform sampler2D uMonumentTex;
+uniform float     uPhotoReady;
 // Interaction uniforms (Brutalist protagonist: click position)
 uniform vec2 uClickPos; // 0-1 normalized click position
 
@@ -141,8 +144,14 @@ void main(){
 
   shapeCol*=sigTint;
 
-  // BACKGROUND (pure black void)
+  // BACKGROUND — monument photo crushado B&W, o void puro si no hay foto
   vec3 bgCol=vec3(0.);
+  if(uPhotoReady>0.5){
+    float luma=dot(texture2D(uMonumentTex,vUv).rgb,vec3(0.299,0.587,0.114));
+    // Hard contrast crush — brutalist treatment, no gradients
+    float crushed=step(0.42,luma)*luma*0.50;
+    bgCol=vec3(crushed);
+  }
 
   // COMPOSITE (hard edge, NO anti-aliasing)
   vec3 col=mix(bgCol, shapeCol, fill);

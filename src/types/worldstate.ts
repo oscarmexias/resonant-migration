@@ -14,7 +14,8 @@ export interface WorldStateClima {
   wind: number          // km/h → particle speed
   windDir: number       // 0-360° → field direction
   uv: number            // 0-11 → brightness
-  humidity: number      // 0-100 → density
+  humidity: number      // 0-100 → atmospheric density / haze
+  precipitation: number // mm/h → actual rainfall right now (0 = dry)
 }
 
 export interface WorldStateEventos {
@@ -138,7 +139,7 @@ export interface SignalState {
 
 // Fallback WorldState when APIs fail
 export const FALLBACK_WORLDSTATE: Omit<WorldState, 'location' | 'generatedAt' | 'seed' | 'editionNumber'> = {
-  clima: { temp: 20, wind: 10, windDir: 0, uv: 3, humidity: 60 },
+  clima: { temp: 20, wind: 10, windDir: 0, uv: 3, humidity: 60, precipitation: 0 },
   eventos: { toneScore: 0, conflictDensity: 0.3, dominantTheme: 'culture' },
   cosmos: { kpIndex: 2, solarWind: 400 },
   economia: { volatilityIndex: 20, trendDir: 'neutral' },

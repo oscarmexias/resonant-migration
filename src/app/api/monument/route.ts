@@ -50,6 +50,85 @@ async function fetchUnsplashPhoto(query: string): Promise<string | null> {
   }
 }
 
+// ── Wikimedia Commons — high-quality professional photography ─────────────────
+// Commons has orders of magnitude better images than Wikipedia article thumbnails.
+// Uses the File namespace (ns=6) search + imageinfo API to get 1280px URLs.
+const COMMONS_API = 'https://commons.wikimedia.org/w/api.php'
+
+async function fetchCommonsImage(query: string): Promise<string | null> {
+  try {
+    // Step 1: search Commons File namespace for the landmark
+    const searchUrl = new URL(COMMONS_API)
+    searchUrl.searchParams.set('action', 'query')
+    searchUrl.searchParams.set('list', 'search')
+    searchUrl.searchParams.set('srsearch', query)
+    searchUrl.searchParams.set('srnamespace', '6')   // File: namespace
+    searchUrl.searchParams.set('srlimit', '5')
+    searchUrl.searchParams.set('format', 'json')
+    searchUrl.searchParams.set('origin', '*')
+
+    const searchRes = await fetch(searchUrl.toString(), {
+      headers: { 'User-Agent': WIKI_UA },
+      next: { revalidate: 86400 },
+    })
+    if (!searchRes.ok) return null
+    const searchData = await searchRes.json()
+
+    const files: Array<{ title: string }> = searchData?.query?.search ?? []
+    // Skip non-photo files (SVG, OGG, PDF, maps, etc.)
+    const photoFiles = files.filter((f) => {
+      const t = f.title.toLowerCase()
+      return !t.endsWith('.svg') && !t.endsWith('.ogg') && !t.endsWith('.pdf')
+        && !t.endsWith('.ogv') && !t.endsWith('.webm') && !t.includes('map')
+        && !t.includes('plan') && !t.includes('coat_of_arms') && !t.includes('logo')
+        && !t.includes('diagram') && !t.includes('icon')
+    })
+    if (photoFiles.length === 0) return null
+
+    // Step 2: get the actual image URL at 1280px width
+    const titles = photoFiles.slice(0, 3).map((f) => f.title).join('|')
+    const infoUrl = new URL(COMMONS_API)
+    infoUrl.searchParams.set('action', 'query')
+    infoUrl.searchParams.set('titles', titles)
+    infoUrl.searchParams.set('prop', 'imageinfo')
+    infoUrl.searchParams.set('iiprop', 'url|size|mime')
+    infoUrl.searchParams.set('iiurlwidth', '1280')
+    infoUrl.searchParams.set('format', 'json')
+    infoUrl.searchParams.set('origin', '*')
+
+    const infoRes = await fetch(infoUrl.toString(), {
+      headers: { 'User-Agent': WIKI_UA },
+      next: { revalidate: 86400 },
+    })
+    if (!infoRes.ok) return null
+    const infoData = await infoRes.json()
+
+    const pages = Object.values(infoData?.query?.pages ?? {}) as Array<{
+      imageinfo?: Array<{ thumburl?: string; url?: string; mime?: string; width?: number; height?: number }>
+    }>
+
+    // Pick the best photo: prefer landscape orientation, skip non-image MIME types
+    let bestUrl: string | null = null
+    let bestScore = -1
+    for (const page of pages) {
+      const info = page.imageinfo?.[0]
+      if (!info) continue
+      if (!info.mime?.startsWith('image/')) continue
+      const url = info.thumburl ?? info.url ?? null
+      if (!url) continue
+      const w = info.width ?? 0
+      const h = info.height ?? 1
+      const ratio = w / h
+      // Prefer landscape (ratio > 1) and reasonable resolution
+      const score = (ratio > 1 ? ratio : 0) + (w > 800 ? 1 : 0)
+      if (score > bestScore) { bestScore = score; bestUrl = url }
+    }
+    return bestUrl
+  } catch {
+    return null
+  }
+}
+
 // ── Wikipedia ─────────────────────────────────────────────────────────────────
 async function fetchWikiImage(wikiTitle: string): Promise<string | null> {
   try {
@@ -107,15 +186,17 @@ export async function GET(request: NextRequest) {
   const city     = searchParams.get('city') ?? ''
   const cityCode = (searchParams.get('cityCode') ?? '').toUpperCase()
 
-  // Resolve monument entry
+  // Resolve monument entry from curated database
   const entryByCity = city ? getMonumentByCity(city) : null
   const entry       = entryByCity ?? (cityCode ? getMonument(cityCode) : null)
 
   if (entry) {
-    // 1. Try Unsplash first — "monument name city" gives best editorial results
+    // Priority: Unsplash (if key) → Wikimedia Commons → Wikipedia article image
     const unsplashQuery = `${entry.name} ${entry.city} landmark`
+    const commonsQuery  = `${entry.name} ${entry.city}`
     const imageUrl =
       (await fetchUnsplashPhoto(unsplashQuery)) ??
+      (await fetchCommonsImage(commonsQuery)) ??
       (await fetchWikiImage(entry.wikiTitle))
 
     if (imageUrl) {
@@ -126,12 +207,12 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  // 2. Wikipedia search fallback for unknown/uncurated cities
+  // Fallback for unknown/uncurated cities
   const searchCity = city || entry?.city || ''
   if (searchCity) {
-    // Try Unsplash with city name first
     const unsplashFallback = await fetchUnsplashPhoto(`${searchCity} landmark famous monument`)
-    const imageUrl = unsplashFallback ?? await searchWikiMonument(searchCity)
+    const commonsFallback  = await fetchCommonsImage(`${searchCity} landmark`)
+    const imageUrl = unsplashFallback ?? commonsFallback ?? await searchWikiMonument(searchCity)
     if (imageUrl) {
       return NextResponse.json(
         {

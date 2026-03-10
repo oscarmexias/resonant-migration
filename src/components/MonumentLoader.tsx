@@ -205,12 +205,12 @@ export default function MonumentLoader() {
       }
     }
 
-    // When all 6 signals succeed, transition phase after 1200ms
+    // When all 6 signals succeed, transition to monument-reveal ceremony first
     const allSuccess = ALL_SIGNAL_KEYS.every((k) => signals[k] === 'success')
     if (allSuccess && !hasTriggeredRef.current) {
       hasTriggeredRef.current = true
       allDoneTimerRef.current = setTimeout(() => {
-        setPhase('vision-select')
+        setPhase('monument-reveal')
       }, 1200)
     }
   }, [signals, setPhase])

@@ -19,6 +19,9 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Monument photo substrate
+uniform sampler2D uMonumentTex;
+uniform float     uPhotoReady;
 // Interaction uniforms (Surveillance protagonist: microphone)
 uniform float uMicLevel;
 uniform float uMicSeed;
@@ -224,6 +227,16 @@ void main(){
   // OUTPUT
   vec3 col=vec3(r,g,b);
   col=clamp(col,0.,1.);
+
+  // MONUMENT PHOTO — real surveillance feed blended as CCTV base
+  if(uPhotoReady>0.5){
+    float photoLuma=dot(texture2D(uMonumentTex,pixUV).rgb,vec3(0.299,0.587,0.114));
+    // Dark green-phosphor treatment matching CCTV aesthetic
+    vec3 cctv=vec3(photoLuma*0.06, photoLuma*0.42, photoLuma*0.04)*scan*.9;
+    col=mix(col, col*0.55+cctv, 0.55);
+    col=clamp(col,0.,1.);
+  }
+
   gl_FragColor=vec4(col,1.);
 }
 `

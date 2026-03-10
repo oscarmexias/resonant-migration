@@ -320,6 +320,40 @@ h1, h2, h3 { font-family: var(--font-display); letter-spacing: 0.05em; }
   }
 }
 
+/* ── CTA button breathing glow (Glow Effect — breathing mode, 21st.dev) ────── */
+@keyframes cta-breathe {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(212, 129, 31, 0.2),
+                inset 0 0 6px rgba(212, 129, 31, 0.04);
+  }
+  50% {
+    box-shadow: 0 0 32px rgba(212, 129, 31, 0.65),
+                0 0 64px rgba(212, 129, 31, 0.18),
+                inset 0 0 12px rgba(212, 129, 31, 0.08);
+  }
+}
+
+.cta-breathe {
+  animation: cta-breathe 3s ease-in-out infinite;
+}
+
+/* ── Vision card number badge ───────────────────────────────────────────────── */
+.vision-number {
+  display: inline-block;
+  font-family: var(--font-display);
+  font-size: 28px;
+  color: var(--eye-core);
+  opacity: 0.5;
+  letter-spacing: 0;
+  line-height: 1;
+  margin-bottom: var(--sp-2);
+  transition: opacity 0.2s;
+}
+.vision-card:hover .vision-number,
+.vision-card:focus-visible .vision-number {
+  opacity: 1;
+}
+
 /* ── Idle screen ambient glow ──────────────────────────────────────────────── */
 .idle-ambient {
   position: absolute;

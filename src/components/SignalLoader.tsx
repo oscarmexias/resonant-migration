@@ -1,8 +1,43 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useWorldStateStore } from '@/store/worldState'
 import type { SignalState } from '@/types/worldstate'
+
+/** Flickers a random 3-digit number while `active` — freezes to `frozen` on success */
+function FlickerValue({ active, frozen }: { active: boolean; frozen?: string }) {
+  const [val, setVal] = useState('···')
+  const idRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    if (active) {
+      idRef.current = setInterval(() => {
+        setVal(Math.floor(Math.random() * 1000).toString().padStart(3, '0'))
+      }, 70)
+    } else {
+      if (idRef.current) clearInterval(idRef.current)
+      setVal(frozen ?? '···')
+    }
+    return () => { if (idRef.current) clearInterval(idRef.current) }
+  }, [active, frozen])
+
+  return (
+    <span
+      style={{
+        color: active ? 'var(--eye-core)' : 'var(--text-dim)',
+        fontSize: '8px',
+        letterSpacing: '0.12em',
+        fontVariantNumeric: 'tabular-nums',
+        opacity: active ? 0.75 : 0.4,
+        transition: 'color 0.3s ease, opacity 0.3s ease',
+        minWidth: '28px',
+        textAlign: 'right',
+      }}
+    >
+      {val}
+    </span>
+  )
+}
 
 const SIGNALS: Array<{
   key: keyof SignalState
@@ -59,15 +94,15 @@ export default function SignalLoader() {
     <div
       role="status"
       style={{
-        position: 'absolute',
-        top: '50%',
+        position: 'fixed',
+        bottom: 'var(--sp-6)',
         left: '50%',
-        transform: 'translate(-50%, -50%)',
+        transform: 'translateX(-50%)',
         width: '100%',
         maxWidth: '380px',
         padding: '0 var(--sp-6)',
         fontFamily: 'var(--font-mono)',
-        zIndex: 15,
+        zIndex: 20,
       }}
     >
       {/* Header: coordinates + elapsed */}
@@ -136,6 +171,9 @@ export default function SignalLoader() {
                   alignSelf: 'center',
                 }}
               />
+
+              {/* Flickering value counter during loading */}
+              <FlickerValue active={isLoading} frozen={isSuccess ? '100' : undefined} />
 
               {/* Source or "what" description */}
               <span style={{ color: 'var(--text-dim)', fontSize: '8px', letterSpacing: '0.1em', flexShrink: 0 }}>

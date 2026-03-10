@@ -40,7 +40,7 @@ function checkRateLimit(ip: string): boolean {
 // ─── API Fetchers ─────────────────────────────────────────────────────────────
 
 async function fetchClima(lat: number, lng: number): Promise<WorldStateClima> {
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m,uv_index,relative_humidity_2m&wind_speed_unit=kmh`
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m,uv_index,relative_humidity_2m,precipitation&wind_speed_unit=kmh`
   const res = await fetch(url, { next: { revalidate: 300 } })
   if (!res.ok) throw new Error('Open-Meteo failed')
   const data = await res.json()
@@ -51,6 +51,7 @@ async function fetchClima(lat: number, lng: number): Promise<WorldStateClima> {
     windDir: c.wind_direction_10m ?? FALLBACK_WORLDSTATE.clima.windDir,
     uv: c.uv_index ?? FALLBACK_WORLDSTATE.clima.uv,
     humidity: c.relative_humidity_2m ?? FALLBACK_WORLDSTATE.clima.humidity,
+    precipitation: c.precipitation ?? 0,
   }
 }
 

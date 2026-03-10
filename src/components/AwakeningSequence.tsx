@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
+import { ScrambleText } from '@/components/ui/ScrambleText'
 
 interface AwakeningSequenceProps {
   onReady: () => void
@@ -98,7 +99,7 @@ function SequenceLine({
     case 'label':
       return (
         <p style={{ fontSize: '9px', letterSpacing: '0.3em', color: 'var(--text-dim)', margin: '0 0 var(--sp-2)', animation: 'tape-out 0.3s ease-out' }}>
-          {line.text}
+          <ScrambleText text={line.text} speed={28} />
         </p>
       )
 
@@ -132,7 +133,9 @@ function SequenceLine({
           </span>
 
           {/* Label */}
-          <span
+          <ScrambleText
+            text={line.label}
+            speed={30}
             style={{
               fontSize: '10px',
               letterSpacing: '0.15em',
@@ -141,9 +144,7 @@ function SequenceLine({
               transition: 'color 0.3s ease',
               minWidth: '132px',
             }}
-          >
-            {line.label}
-          </span>
+          />
 
           {/* Dotted fill */}
           <span style={{ flex: 1, borderBottom: '1px dotted var(--concrete)', height: '1px', alignSelf: 'center' }} />
@@ -167,7 +168,7 @@ function SequenceLine({
     case 'status':
       return (
         <p style={{ fontSize: '10px', letterSpacing: '0.25em', color: 'var(--accent)', margin: 'var(--sp-2) 0 0', fontWeight: '700', animation: 'tape-out 0.3s ease-out' }}>
-          {line.text}
+          <ScrambleText text={line.text} speed={22} />
         </p>
       )
 

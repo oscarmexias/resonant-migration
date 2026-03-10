@@ -11,6 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.78.0",
     "@react-spring/three": "^9.7.5",
     "@react-three/drei": "^9.117.0",
     "@react-three/fiber": "^8.17.0",

@@ -13,6 +13,8 @@ import Receipt from '@/components/Receipt'
 import AwakeningSequence from '@/components/AwakeningSequence'
 import CitySearch from '@/components/CitySearch'
 import { VisionSelector } from '@/components/VisionSelector'
+import SignalLoader from '@/components/SignalLoader'
+import MonumentReveal from '@/components/MonumentReveal'
 
 // Three.js requires browser — no SSR
 const ArtCanvas = dynamic(() => import('@/components/ArtCanvas'), {
@@ -274,6 +276,23 @@ export default function Home() {
       )}
 
       {phase === 'loading-signals' && <MonumentLoader />}
+      {phase === 'loading-signals' && <SignalLoader />}
+
+      {/* Monument Reveal — ceremony after signals.
+          If vision already selected (city-search re-route): go straight to generating→output.
+          If first time: go to vision-select. */}
+      {phase === 'monument-reveal' && (
+        <MonumentReveal
+          onReady={() => {
+            if (selectedVision) {
+              setPhase('generating')
+              setTimeout(() => setPhase('output'), 900)
+            } else {
+              setPhase('vision-select')
+            }
+          }}
+        />
+      )}
 
       {phase === 'output' && worldState && (
         <Receipt worldState={worldState} onNuevaVision={reset} />

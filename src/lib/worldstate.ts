@@ -230,7 +230,7 @@ export function decodeSharePayload(encoded: string): WorldState | null {
         city: p.cn,
         cityCode: p.cc,
       },
-      clima: { temp: p.t, wind: p.w, windDir: p.wd, uv: p.uv, humidity: p.h },
+      clima: { temp: p.t, wind: p.w, windDir: p.wd, uv: p.uv, humidity: p.h, precipitation: 0 },
       cosmos: { kpIndex: p.kp, solarWind: p.sw },
       economia: { volatilityIndex: p.vi, trendDir },
       eventos: { toneScore: p.ts, conflictDensity: Math.max(0, -p.ts) / 100, dominantTheme: topTheme },

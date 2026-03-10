@@ -19,6 +19,9 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Monument photo substrate
+uniform sampler2D uMonumentTex;
+uniform float     uPhotoReady;
 // Interaction uniforms (Organism protagonist: microphone)
 uniform float uMicLevel;
 
@@ -176,6 +179,15 @@ void main(){
   // GLOSSINESS/WETNESS (humidity → specular highlights)
   float specular=pow(max(dot(normalize(p), normalize(vec2(-.5,.8))),0.), 16.);
   col+=vec3(specular)*humidity*.4;
+
+  // MONUMENT PHOTO — organic flesh substrate (landmark becomes living tissue)
+  if(uPhotoReady>0.5){
+    vec3 photo=texture2D(uMonumentTex,vUv).rgb;
+    float luma=dot(photo,vec3(0.299,0.587,0.114));
+    // Tint toward red/purple flesh — the building becomes biology
+    vec3 flesh=vec3(luma*0.42, luma*0.10, luma*0.15);
+    col=mix(col, col*0.60+flesh*0.50, 0.40);
+  }
 
   // VIGNETTE
   float vig=1.-dot(p*.6,p*.6);

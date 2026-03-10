@@ -2,6 +2,7 @@
 
 import { useEffect } from 'react'
 import { VISIONS, type VisionType } from '@/types/vision'
+import { GlowingEffect } from '@/components/ui/GlowingEffect'
 
 interface VisionSelectorProps {
   onSelect: (vision: VisionType) => void
@@ -12,7 +13,7 @@ export function VisionSelector({ onSelect }: VisionSelectorProps) {
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
       const key = e.key
-      if (key >= '1' && key <= '5') {
+      if (key >= '1' && key <= '7') {
         const visionIndex = parseInt(key) - 1
         const vision = Object.values(VISIONS)[visionIndex]
         if (vision) {
@@ -35,23 +36,28 @@ export function VisionSelector({ onSelect }: VisionSelectorProps) {
 
         <div className="vision-grid">
           {Object.values(VISIONS).map((v, index) => (
-            <button
+            <GlowingEffect
               key={v.id}
-              onClick={() => onSelect(v.id)}
-              className="vision-card"
-              data-vision={v.id}
-              aria-label={`Seleccionar visión ${v.name}`}
+              style={{ display: 'flex', flexDirection: 'column' }}
             >
-              <span className="vision-number">{index + 1}</span>
-              <h2 className="vision-name">{v.name}</h2>
-              <p className="vision-tagline">{v.tagline}</p>
-              <p className="vision-description">{v.description}</p>
-            </button>
+              <button
+                onClick={() => onSelect(v.id)}
+                className="vision-card"
+                data-vision={v.id}
+                aria-label={`Seleccionar visión ${v.name}`}
+                style={{ flex: 1 }}
+              >
+                <span className="vision-number">{index + 1}</span>
+                <h2 className="vision-name">{v.name}</h2>
+                <p className="vision-tagline">{v.tagline}</p>
+                <p className="vision-description">{v.description}</p>
+              </button>
+            </GlowingEffect>
           ))}
         </div>
 
         <p className="vision-hint">
-          Presiona 1-5 en tu teclado para seleccionar rápidamente
+          Presiona 1-7 en tu teclado para seleccionar rápidamente
         </p>
       </div>
     </div>

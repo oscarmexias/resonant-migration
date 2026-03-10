@@ -19,6 +19,9 @@ uniform vec2  uSocial;
 uniform vec2  uCity;
 uniform vec2  uSeed;
 uniform float uLandmarkType;
+// Monument photo substrate
+uniform sampler2D uMonumentTex;
+uniform float     uPhotoReady;
 // Interaction uniforms (Glitch protagonist: shake/motion)
 uniform float uShakeIntensity;
 
@@ -264,6 +267,20 @@ void main(){
   colR+=lColR*.9;
   colG+=lColG*.9;
   colB+=lColB*.9;
+
+  // MONUMENT PHOTO — fractures with same chromatic aberration as the art
+  // Sampled per-channel at the same offsets (rOff/gOff/bOff) so photo tears in sync
+  if(uPhotoReady>0.5){
+    float pr=texture2D(uMonumentTex,glitchUV+rOff*1.6).r;
+    float pg=texture2D(uMonumentTex,glitchUV+gOff).g;
+    float pb=texture2D(uMonumentTex,glitchUV+bOff*1.6).b;
+    vec3 photoFrac=vec3(pr,pg,pb);
+    // More photo visible during collapse (corruption makes landmark more present)
+    float photoMix=mix(0.38, 0.55, corr);
+    colR=mix(colR, photoFrac*vec3(1.,0.,0.)+colR*0.6, photoMix);
+    colG=mix(colG, photoFrac*vec3(0.,1.,0.)+colG*0.6, photoMix);
+    colB=mix(colB, photoFrac*vec3(0.,0.,1.)+colB*0.6, photoMix);
+  }
 
   // FINAL RGB ASSEMBLY
   vec3 col=vec3(colR.r, colG.g, colB.b);

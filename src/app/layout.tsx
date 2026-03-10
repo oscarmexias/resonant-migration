@@ -1,6 +1,13 @@
 import type { Metadata, Viewport } from 'next'
 import Script from 'next/script'
+import dynamic from 'next/dynamic'
 import './globals.css'
+
+// CursorTrail — client-only, no SSR
+const CursorTrail = dynamic(
+  () => import('@/components/ui/CursorTrail').then((m) => ({ default: m.CursorTrail })),
+  { ssr: false }
+)
 
 export const metadata: Metadata = {
   title: 'El Ojo — Resonant Migration',
@@ -80,6 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <a href="#generation" className="skip-link">
           Saltar a generación
         </a>
+        <CursorTrail />
         {children}
       </body>
     </html>

@@ -167,6 +167,7 @@ export default function ElOjo({ phase, onActivate }: ElOjoProps) {
 
           <button
             onClick={onActivate}
+            className="cta-breathe"
             style={{
               display: 'block',
               width: '100%',
@@ -181,15 +182,17 @@ export default function ElOjo({ phase, onActivate }: ElOjoProps) {
               letterSpacing: '0.3em',
               cursor: 'pointer',
               padding: 'var(--sp-4) var(--sp-8)',
-              transition: 'background 0.15s, color 0.15s',
+              transition: 'background 0.15s, color 0.15s, box-shadow 0.15s',
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.background = 'var(--eye-core)'
               e.currentTarget.style.color = 'var(--void)'
+              e.currentTarget.style.boxShadow = '0 0 40px rgba(212,129,31,0.8)'
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'none'
               e.currentTarget.style.color = 'var(--eye-core)'
+              e.currentTarget.style.boxShadow = ''
             }}
           >
             COMPARTIR UBICACIÓN

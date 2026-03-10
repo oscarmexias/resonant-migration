@@ -678,6 +678,74 @@
             50% { opacity: 0; }
         }
 
+        /* ── Film Grain Overlay (Noisy Gradient Backgrounds pattern) ── */
+        #grain-canvas {
+            position: fixed; top: 0; left: 0;
+            width: 100%; height: 100%;
+            pointer-events: none; z-index: 9000;
+            opacity: 0.03; mix-blend-mode: screen;
+        }
+
+        /* ── Canvas container glow border (GlowingEffect — Aceternity) ── */
+        @property --border-angle {
+            syntax: '<angle>';
+            initial-value: 0deg;
+            inherits: false;
+        }
+        @keyframes rotateBorder { to { --border-angle: 360deg; } }
+
+        #canvas-container {
+            --border-angle: 0deg;
+        }
+        #canvas-container::after {
+            content: '';
+            position: absolute;
+            inset: -1px; border-radius: 2px;
+            background: conic-gradient(
+                from var(--border-angle),
+                transparent 0%,
+                var(--accent-1) 15%,
+                var(--accent-2) 50%,
+                var(--accent-1) 85%,
+                transparent 100%
+            );
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            padding: 1px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            animation: rotateBorder 5s linear infinite;
+            z-index: 10;
+        }
+        #canvas-container:hover::after { opacity: 0.5; }
+        #canvas-container.audio-active::after { opacity: 0.7; animation-duration: 1.5s; }
+
+        /* ── Button breathing glow (Glow Effect — breathing mode) ── */
+        @keyframes dropBreath {
+            0%, 100% { box-shadow: 0 0 6px var(--accent-1-dim); }
+            50%       { box-shadow: 0 0 20px var(--accent-1), 0 0 40px var(--accent-1-dim); }
+        }
+        .btn-send { animation: dropBreath 2.8s ease-in-out infinite; }
+
+        @keyframes randomPulse {
+            0%, 100% { box-shadow: 0 0 4px var(--accent-1-dim); }
+            50%       { box-shadow: 0 0 18px var(--accent-2), 0 0 35px var(--accent-2-dim); }
+        }
+        .btn.primary { animation: randomPulse 3.2s ease-in-out infinite; }
+
+        /* ── Seed display beat flash ── */
+        .seed-display {
+            transition: color 0.1s, text-shadow 0.1s;
+        }
+        .seed-display.beat {
+            color: var(--accent-2) !important;
+            text-shadow: 0 0 12px var(--accent-2);
+        }
+
         /* ═══════════════════════════════════════════════════════════════════════ */
         /* MOBILE RESPONSIVE */
         /* ═══════════════════════════════════════════════════════════════════════ */
@@ -777,6 +845,7 @@
     </style>
 </head>
 <body>
+    <canvas id="grain-canvas"></canvas>
     <header class="header">
         <div class="header-left">
             <div class="title-jp glitch" onclick="showAboutModal()">共鳴移動</div>
@@ -1279,6 +1348,7 @@
 
         let particles = [], attractors = [], letterParticles = [];
         let time = 0, globalHueShift = 0;
+        let mouseTrail = [];
         let warmColor = { h: 25, s: 95, b: 90 };
         let coolColor = { h: 195, s: 70, b: 95 };
 
@@ -1356,15 +1426,47 @@
                 if (colorSplashes[i].isDead()) colorSplashes.splice(i, 1);
             }
 
+            // ── Mouse cursor trail inside canvas (Cursor Trail pattern) ──
+            if (mouseX > 0 && mouseX < width && mouseY > 0 && mouseY < height) {
+                mouseTrail.push({ x: mouseX, y: mouseY });
+                if (mouseTrail.length > 22) mouseTrail.shift();
+            } else if (mouseTrail.length > 0) {
+                mouseTrail.shift();
+            }
+            for (let i = 0; i < mouseTrail.length; i++) {
+                let ratio = i / mouseTrail.length;
+                noStroke();
+                fill(globalHueShift, 70, 95, ratio * 18);
+                circle(mouseTrail[i].x, mouseTrail[i].y, 2 + ratio * 9);
+            }
+
             let forceMultiplier = 1;
             if (audioEnabled) {
                 forceMultiplier = 1 + bassLevel * 2;
                 if (beatDetected) {
+                    // ── Enhanced beat flash — radial burst (Background Beams pattern) ──
                     push();
-                    fill(globalHueShift + 30, 80, 100, 5);
-                    rect(0, 0, width, height);
+                    colorMode(RGB);
+                    let beatGrad = drawingContext.createRadialGradient(
+                        width/2, height/2, 0,
+                        width/2, height/2, min(width, height) * 0.5
+                    );
+                    let h = globalHueShift + 30;
+                    beatGrad.addColorStop(0, `hsla(${h}, 80%, 60%, 0.10)`);
+                    beatGrad.addColorStop(0.5, `hsla(${h}, 60%, 50%, 0.04)`);
+                    beatGrad.addColorStop(1, 'hsla(0, 0%, 0%, 0)');
+                    drawingContext.fillStyle = beatGrad;
+                    drawingContext.fillRect(0, 0, width, height);
                     pop();
+
+                    // Seed display beat flash
+                    const seedEl = document.getElementById('seed-display');
+                    const mobileSeedEl = document.getElementById('mobile-seed-display');
+                    if (seedEl) { seedEl.classList.add('beat'); setTimeout(() => seedEl.classList.remove('beat'), 120); }
+                    if (mobileSeedEl) { mobileSeedEl.classList.add('beat'); setTimeout(() => mobileSeedEl.classList.remove('beat'), 120); }
                 }
+                // Toggle canvas active class for border animation speed
+                document.getElementById('canvas-container').classList.toggle('audio-active', audioEnabled);
             }
 
             for (let p of particles) {
@@ -1659,6 +1761,29 @@
         }
 
         window.addEventListener('load', updateSeedDisplay);
+
+        // ── Film Grain Overlay (Noisy Gradient Backgrounds pattern) ──────────
+        (function initGrain() {
+            const gc = document.getElementById('grain-canvas');
+            if (!gc) return;
+            const gx = gc.getContext('2d');
+            function resize() { gc.width = window.innerWidth; gc.height = window.innerHeight; }
+            resize();
+            window.addEventListener('resize', resize);
+            function render() {
+                const w = gc.width, h = gc.height;
+                const img = gx.createImageData(w, h);
+                const d = img.data;
+                for (let i = 0; i < d.length; i += 4) {
+                    const v = Math.floor(Math.random() * 255);
+                    d[i] = d[i+1] = d[i+2] = v;
+                    d[i+3] = Math.random() < 0.62 ? 0 : Math.floor(Math.random() * 16);
+                }
+                gx.putImageData(img, 0, 0);
+            }
+            render();
+            setInterval(render, 90); // ~11fps shimmer
+        })();
     </script>
 </body>
 </html>
