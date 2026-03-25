@@ -339,6 +339,62 @@
       background: rgba(212,129,31,0.08);
       box-shadow: 0 0 18px var(--glow);
     }
+
+    /* ─── Film Grain Overlay (Noisy Gradient Backgrounds pattern) ─── */
+    #grain-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 9003; opacity: 0.028;
+      mix-blend-mode: screen;
+    }
+
+    /* ─── Ambient Noise Canvas (Aurora Shader pattern) ─── */
+    #ambient-noise-canvas {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 0; opacity: 0;
+      transition: opacity 1.4s ease;
+      filter: blur(24px);
+    }
+    #ambient-noise-canvas.visible { opacity: 1; }
+
+    /* ─── Cursor Vapor Trail (Cursor Trail pattern) ─── */
+    .ctrail {
+      position: fixed; border-radius: 50%;
+      pointer-events: none; z-index: 99997;
+      transform: translate(-50%, -50%);
+    }
+
+    /* ─── Button Breathing Glow (Glow Effect — breathing mode) ─── */
+    @keyframes btnBreath {
+      0%,100% { box-shadow: 0 0 10px rgba(212,129,31,0.18), 0 0 22px rgba(212,129,31,0.06); }
+      50%      { box-shadow: 0 0 38px rgba(212,129,31,0.60), 0 0 75px rgba(212,129,31,0.20), inset 0 0 14px rgba(212,129,31,0.06); }
+    }
+    .btn-location { animation: btnBreath 3.2s ease-in-out infinite; }
+
+    /* ─── Mint Button Glow (Glow Effect — pulse mode) ─── */
+    @keyframes mintPulse {
+      0%,100% { box-shadow: 0 0 8px rgba(212,129,31,0.25), inset 0 0 4px rgba(212,129,31,0.05); }
+      50%      { box-shadow: 0 0 28px rgba(212,129,31,0.75), 0 0 55px rgba(212,129,31,0.22), inset 0 0 10px rgba(212,129,31,0.10); }
+    }
+    .btn-act.primary { animation: mintPulse 2.4s ease-in-out infinite; }
+
+    /* ─── Signal value typewriter cursor ─── */
+    .signal-value.typing::after {
+      content: '▌';
+      animation: blink 0.6s step-end infinite;
+      color: var(--eye-core);
+      font-size: 7px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    /* ─── Enhanced shockwave rings ─── */
+    .seismic-hud {
+      position: fixed; bottom: 100px; right: 24px;
+      font-size: 7px; letter-spacing: 0.3em;
+      color: var(--danger); z-index: 301;
+      opacity: 0; transition: opacity 0.4s;
+      pointer-events: none;
+    }
+    .seismic-hud.active { opacity: 1; animation: statusBlink 0.8s step-end infinite; }
   </style>
 </head>
 <body>
@@ -347,10 +403,13 @@
   height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
   <!-- End Google Tag Manager (noscript) -->
 
+  <canvas id="grain-canvas"></canvas>
+  <canvas id="ambient-noise-canvas"></canvas>
   <div id="cursor"></div>
   <div id="scanlines"></div>
   <div id="vignette"></div>
   <div id="glitch-overlay"></div>
+  <div class="seismic-hud" id="seismic-hud">⚡ SEISMIC ACTIVE</div>
 
   <!-- Header -->
   <div class="header-bar">
@@ -623,7 +682,15 @@
       const b=document.getElementById(`f-${id}`), v=document.getElementById(`v-${id}`);
       const p=document.getElementById('pupil-load');
       if (b) b.classList.add('done');
-      if (v) { v.textContent=text; v.classList.add('done'); }
+      if (v) {
+        v.classList.add('done', 'typing');
+        v.textContent = '';
+        let i = 0;
+        const tick = setInterval(() => {
+          v.textContent = text.substring(0, ++i);
+          if (i >= text.length) { clearInterval(tick); v.classList.remove('typing'); }
+        }, 38);
+      }
       if (p) p.setAttribute('ry', 54+(kpStep+1)*7);
     }
 
@@ -807,6 +874,10 @@
         showState('state-output');
         document.getElementById('hstatus').textContent = '● EN VIVO';
         document.getElementById('hstatus').className = 'header-status online';
+        if (ws.seismic > 0.3) {
+          const hud = document.getElementById('seismic-hud');
+          if (hud) { hud.textContent = `⚡ M${ws.seismic.toFixed(1)} · ${ws.seismicDist}km`; hud.classList.add('active'); }
+        }
         initCanvas(ws);
         stampReceipt(ws);
       });
@@ -888,6 +959,7 @@
           case 0: return `rgba(${Math.round(212*warmth+180*(1-warmth))},${Math.round(129*warmth+80*(1-warmth))},31,${a})`;
           case 1: return `rgba(0,170,255,${a * 0.45})`;
           case 2: return `rgba(57,255,20,${a * 0.3})`;
+          case 4: return `rgba(140,60,10,${a * 0.08})`; // atmospheric smoke
           default: return `rgba(160,160,160,${a * 0.15})`;
         }
       }
@@ -901,18 +973,31 @@
         ctx.fillStyle = `rgba(8,8,8,${0.04 + chaos * 0.03})`;
         ctx.fillRect(0, 0, c.width, c.height);
 
-        // Shockwave rings if seismic active
-        if (ws.seismic > 1) {
-          const sw = (t * 60) % 400;
-          const sg = ctx.createRadialGradient(
-            c.width/2, c.height/2, sw - 20,
-            c.width/2, c.height/2, sw
-          );
-          sg.addColorStop(0, 'rgba(0,0,0,0)');
-          sg.addColorStop(0.5, `rgba(212,129,31,${ws.seismic * 0.012})`);
-          sg.addColorStop(1, 'rgba(0,0,0,0)');
-          ctx.fillStyle = sg;
-          ctx.fillRect(0, 0, c.width, c.height);
+        // Multi-ring shockwave (enhanced seismic — Background Beams pattern)
+        if (ws.seismic > 0.3) {
+          const intensity = Math.min(ws.seismic / 6, 1);
+          [0, 155, 310].forEach((offset, ri) => {
+            const sw = (t * 55 + offset) % 460;
+            const fade = 1 - sw / 460;
+            const ring = ctx.createRadialGradient(
+              c.width/2, c.height/2, Math.max(0, sw - 28),
+              c.width/2, c.height/2, sw + 8
+            );
+            ring.addColorStop(0, 'rgba(0,0,0,0)');
+            ring.addColorStop(0.35, `rgba(212,129,31,${intensity * fade * 0.022})`);
+            ring.addColorStop(0.65, `rgba(255,60,0,${intensity * fade * 0.010})`);
+            ring.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = ring;
+            ctx.fillRect(0, 0, c.width, c.height);
+          });
+          // Center flash pulse at high magnitudes
+          if (ws.seismic > 3) {
+            const flash = ctx.createRadialGradient(c.width/2, c.height/2, 0, c.width/2, c.height/2, 120);
+            flash.addColorStop(0, `rgba(255,100,20,${(ws.seismic - 3) * 0.01 * (0.5 + Math.sin(t * 8) * 0.5)})`);
+            flash.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.fillStyle = flash;
+            ctx.fillRect(0, 0, c.width, c.height);
+          }
         }
 
         // Update and draw particles
@@ -991,6 +1076,150 @@
         c.width  = window.innerWidth;
         c.height = window.innerHeight;
       }
+    });
+
+    // ═══════════════════════════════════════════════════════
+    // MEJORAS 21ST.DEV — SISTEMAS ADICIONALES
+    // ═══════════════════════════════════════════════════════
+
+    // ─── 1. Film Grain Overlay (Noisy Gradient Backgrounds pattern) ───
+    (function initGrain() {
+      const gc = document.getElementById('grain-canvas');
+      if (!gc) return;
+      const gx = gc.getContext('2d');
+      function resize() { gc.width = window.innerWidth; gc.height = window.innerHeight; }
+      resize();
+      window.addEventListener('resize', resize);
+      function render() {
+        const w = gc.width, h = gc.height;
+        const img = gx.createImageData(w, h);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const v = Math.floor(Math.random() * 255);
+          d[i] = d[i+1] = d[i+2] = v;
+          // sparse grain — only ~35% of pixels get any alpha
+          d[i+3] = Math.random() < 0.65 ? 0 : Math.floor(Math.random() * 18);
+        }
+        gx.putImageData(img, 0, 0);
+      }
+      render();
+      setInterval(render, 85); // ~12fps grain shimmer
+    })();
+
+    // ─── 2. Cursor Vapor Trail (Cursor Trail pattern) ─────────────────
+    (function initTrail() {
+      const N = 18;
+      const TRAIL = Array.from({ length: N }, (_, i) => {
+        const ratio = (i + 1) / N;
+        const size  = 1.5 + ratio * 7.5;
+        const el = document.createElement('div');
+        el.className = 'ctrail';
+        el.style.cssText =
+          `width:${size}px;height:${size}px;` +
+          `background:rgba(212,129,31,${ratio * 0.42});` +
+          `left:-40px;top:-40px;`;
+        document.body.appendChild(el);
+        return el;
+      });
+      const hist = Array(N).fill(null).map(() => ({ x: -40, y: -40 }));
+      let trailMx = -40, trailMy = -40;
+      document.addEventListener('mousemove', e => { trailMx = e.clientX; trailMy = e.clientY; });
+      function animTrail() {
+        // shift history
+        hist.unshift({ x: trailMx, y: trailMy });
+        if (hist.length > N) hist.pop();
+        TRAIL.forEach((el, i) => {
+          el.style.left = hist[i].x + 'px';
+          el.style.top  = hist[i].y + 'px';
+        });
+        requestAnimationFrame(animTrail);
+      }
+      animTrail();
+    })();
+
+    // ─── 3. Ambient Noise Background (Aurora Shader pattern) ──────────
+    (function initAmbient() {
+      const canvas = document.getElementById('ambient-noise-canvas');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+      resize();
+      window.addEventListener('resize', resize);
+
+      let t = 0;
+      const STEP = 22;
+
+      // Layered sin-based noise (cheap FBM approximation — Aurora Shader technique)
+      function fbm(x, y, t) {
+        return (
+          Math.sin(x * 0.9 + t)        * Math.cos(y * 0.7 + t * 0.8)  * 0.5 +
+          Math.sin(x * 0.35 + t * 1.4) * Math.cos(y * 0.45 + t * 0.9) * 0.3 +
+          Math.sin(x * 0.15 + t * 0.5) * Math.sin(y * 0.2  + t * 0.6) * 0.2
+        );
+      }
+
+      function renderAmbient() {
+        t += 0.003;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const W = canvas.width, H = canvas.height;
+        for (let x = 0; x <= W; x += STEP) {
+          for (let y = 0; y <= H; y += STEP) {
+            const n = fbm(x / W * 3.5, y / H * 3.5, t); // -1 to 1
+            const nx = (n + 1) / 2; // 0 to 1
+            if (nx > 0.58) {
+              const a = (nx - 0.58) * 0.18;
+              ctx.fillStyle = `rgba(212,100,20,${a})`;
+              ctx.fillRect(x, y, STEP + 1, STEP + 1);
+            } else if (nx < 0.32) {
+              const a = (0.32 - nx) * 0.08;
+              ctx.fillStyle = `rgba(0,80,180,${a})`;
+              ctx.fillRect(x, y, STEP + 1, STEP + 1);
+            }
+          }
+        }
+        requestAnimationFrame(renderAmbient);
+      }
+
+      // Sync visibility with ARRIVAL state
+      const arrivalEl = document.getElementById('state-arrival');
+      const obs = new MutationObserver(() => {
+        const arriving = !arrivalEl.classList.contains('hidden');
+        canvas.classList.toggle('visible', arriving);
+      });
+      obs.observe(arrivalEl, { attributes: true, attributeFilter: ['class'] });
+      canvas.classList.add('visible');
+
+      renderAmbient();
+    })();
+
+    // ─── 4. Atmospheric smoke blobs injected at canvas init ──────────
+    // These run inside the existing pts loop — col type 4 = smoke
+    // Patch pts AFTER initCanvas is called via btn-grant glitch callback
+    const _origBtnGrant = document.getElementById('btn-grant').onclick;
+    document.getElementById('btn-grant').addEventListener('click', () => {
+      // After transition to output, enhance pts with atmospheric smoke
+      setTimeout(() => {
+        if (!pts || pts.length === 0) return;
+        const c = document.getElementById('art-canvas');
+        if (!c) return;
+        // Add 20 large slow smoke orbs into pts
+        for (let i = 0; i < 20; i++) {
+          pts.push({
+            x:  Math.random() * c.width,
+            y:  Math.random() * c.height,
+            vx: (Math.random() - 0.5) * 0.12,
+            vy: (Math.random() - 0.5) * 0.08,
+            sz: 3.5 + Math.random() * 5,
+            a:  Math.random() * Math.PI * 2,
+            av: (Math.random() - 0.5) * 0.004,
+            r:  120 + Math.random() * 200,
+            ox: Math.random() * c.width,
+            oy: Math.random() * c.height,
+            t:  Math.random() * 100,
+            col: 4, // smoke type
+          });
+        }
+      }, 3200); // wait for loading + transition
     });
   </script>
 </body>
