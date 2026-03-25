@@ -30,3 +30,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Claude Code local
+.claude/settings.local.json
+.claude/sessions/
+.claude/cache/
