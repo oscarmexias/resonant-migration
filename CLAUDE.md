@@ -119,7 +119,7 @@ Phase B (NFT mint + wallet connect) requires activating `security-guidance` plug
 
 If starting in a fresh cloud session without GSD-T:
 1. `npm install` — restores all dependencies
-2. GSD-T auto-installs on first `/user:gsd` invocation
+2. GSD-T lives in `~/.claude/` — reinstall via: `/user:gsd-t-version-update` (requires npm + the GSD-T package)
 3. Secrets: `PERPLEXITY_API_KEY` and `SEMGREP_APP_TOKEN` — set as platform env vars
 4. GitHub: `oscarmexias` account (`oscarmexias@gmail.com`)
 
